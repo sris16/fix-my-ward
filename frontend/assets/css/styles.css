@@ -1,0 +1,23 @@
+/* ===============================
+   App Loader Animation
+================================ */
+
+.loader-logo {
+  animation: logoPulse 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 12px 25px rgba(16, 185, 129, 0.35));
+}
+
+@keyframes logoPulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+}

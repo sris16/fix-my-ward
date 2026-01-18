@@ -1,0 +1,15 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+
+# Logs
+*.log
+
+# Node modules (future backend)
+node_modules/
+
+# Env files
+.env

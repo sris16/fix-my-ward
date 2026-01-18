@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Report an Issue – Fix My Ward</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Leaflet CSS (for map) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="../assets/css/styles.css" />
+</head>
+<body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
+
+  <!-- Top bar -->
+  <header class="w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <!-- Back Button -->
+    <button
+      onclick="history.back()"
+      class="flex items-center gap-1 text-slate-300 hover:text-emerald-400
+         text-sm font-medium transition"><b>← Back</b></button>
+
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
+          <img
+            src="../assets/images/logo.png"
+            alt="Fix My Ward"
+            class="h-8 w-8 rounded-lg shadow-md"
+          />
+          <div>
+            <p class="text-xs text-slate-400">Fix My Ward</p>
+            <h1 class="text-sm font-semibold">Report an Issue</h1>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Badge -->
+      <div id="citizen-badge" class="hidden sm:flex flex-col items-end text-right">
+        <p id="citizen-name-display" class="text-xs font-semibold text-emerald-300"></p>
+        <p id="citizen-email-display" class="text-[10px] text-slate-400"></p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="flex-1">
+    <section class="max-w-3xl mx-auto px-4 py-5 space-y-4">
+
+      <!-- Greeting -->
+      <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex items-start gap-3">
+        <div class="mt-1 text-lg">👋</div>
+        <div>
+          <p id="greeting-text" class="text-sm font-medium mb-1">
+            Hello citizen!
+          </p>
+          <p class="text-xs text-slate-300">
+            Tell us what’s wrong in your area. A clear photo and accurate location help the ward staff resolve it faster.
+          </p>
+        </div>
+      </div>
+
+      <!-- Issue form -->
+      <form id="issue-form" class="space-y-4 bg-slate-900/70 border border-slate-800 rounded-2xl p-4 mb-4">
+
+        <!-- Issue title -->
+        <div class="space-y-1">
+          <label for="issue-title" class="text-xs text-slate-300">Issue Title</label>
+          <input
+            id="issue-title"
+            type="text"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm
+                   focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder="e.g. Large pothole near bus stop"
+            required
+          />
+        </div>
+
+        <!-- Category -->
+        <div class="space-y-1">
+          <label for="issue-category" class="text-xs text-slate-300">Category</label>
+          <select
+            id="issue-category"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm
+                   focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+            required
+          >
+            <option value="">Select a category</option>
+            <option value="road">Road / Pothole</option>
+            <option value="garbage">Garbage / Sanitation</option>
+            <option value="streetlight">Streetlight / Electricity</option>
+            <option value="water">Water / Drainage</option>
+            <option value="tree">Tree / Greenery</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <!-- Description -->
+        <div class="space-y-1">
+          <label for="issue-description" class="text-xs text-slate-300">Description</label>
+          <textarea
+            id="issue-description"
+            rows="3"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm
+                   focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+            placeholder="Describe the problem briefly. e.g. Pothole causing traffic and risk to two-wheelers."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Location + Map -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-xs text-slate-300">Location</label>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                id="btn-use-location"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium
+                       bg-emerald-500/10 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/20">
+                📍 Use my current location
+              </button>
+              <button
+                type="button"
+                id="btn-fullscreen-map"
+                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium
+                       bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700">
+                ⤢ Full screen map
+              </button>
+            </div>
+          </div>
+
+          <input
+            id="issue-location-text"
+            type="text"
+            class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-sm
+                   focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 mb-1"
+            placeholder="Landmark / street address (optional if GPS is not accurate)"
+          />
+
+          <div class="grid grid-cols-2 gap-2">
+            <input
+              id="issue-lat"
+              type="text"
+              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-[11px]
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="Latitude"
+              readonly
+            />
+            <input
+              id="issue-lng"
+              type="text"
+              class="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-[11px]
+                     focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="Longitude"
+              readonly
+            />
+          </div>
+
+          <!-- Normal map preview -->
+          <div id="issue-map" class="mt-2 h-52 rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+            <!-- Leaflet map will render here -->
+          </div>
+
+          <p class="text-[11px] text-slate-500 mt-1">
+            You can zoom or open the map in full-screen to confirm the exact spot.
+          </p>
+        </div>
+
+        <!-- Photo upload (max 4 photos + preview) -->
+        <div class="space-y-1">
+          <label class="text-xs text-slate-300">Photos of the issue (up to 4)</label>
+          <div
+            class="border border-dashed border-slate-700 rounded-xl px-3 py-3 flex items-center justify-between gap-3 bg-slate-950">
+            <div class="text-[11px] text-slate-400">
+              <p>Upload clear photos of the problem.</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">
+                You can select up to 4 images.
+              </p>
+            </div>
+            <label
+              for="issue-photo"
+              class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-[11px] font-semibold
+                     bg-emerald-500 text-slate-900 hover:bg-emerald-400 cursor-pointer">
+              📸 Choose Photos
+            </label>
+            <input
+              id="issue-photo"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              class="hidden"
+              multiple
+            />
+          </div>
+          <p id="photo-file-name" class="text-[11px] text-slate-400 mt-1"></p>
+
+          <!-- Thumbnails preview -->
+          <div id="photo-preview" class="mt-2 grid grid-cols-4 gap-2"></div>
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          class="w-full mt-2 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
+                 bg-emerald-500 text-slate-900 hover:bg-emerald-400 transition">
+          🚀 Submit Issue
+        </button>
+
+        <p id="issue-message" class="text-[11px] text-emerald-300 mt-1 hidden">
+          Your issue has been submitted successfully. You can view it in "Track My Reports".
+        </p>
+
+      </form>
+
+      <p class="text-[11px] text-slate-500 text-center">
+        Want to report another place later? Just open Fix My Ward again – your profile stays saved on this device.
+      </p>
+    </section>
+  </main>
+
+  <!-- Fullscreen map overlay -->
+  <div
+    id="map-fullscreen-overlay"
+    class="hidden fixed inset-0 z-50 bg-slate-950/95">
+    <div class="absolute top-3 right-3 z-10">
+      <button
+        id="btn-close-fullscreen"
+        class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-slate-100 border border-slate-700 hover:bg-slate-800">
+        ✕ Close map
+      </button>
+    </div>
+    <div id="issue-map-fullscreen" class="w-full h-full"></div>
+  </div>
+
+  <!-- Leaflet JS (for map) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- JS -->
+  <script src="../assets/js/citizen.js"></script>
+  <script src="../assets/js/loader.js"></script>
+
+</body>
+</html>
