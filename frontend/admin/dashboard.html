@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Fix My Ward - Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Header -->
+  <div class="bg-indigo-600 text-white p-4 shadow">
+    <h1 class="text-2xl font-bold">Fix My Ward - Admin Panel</h1>
+  </div>
+
+  <div class="p-6">
+
+    <!-- Stats Section -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-gray-500">Total Issues</h2>
+        <p id="totalCount" class="text-2xl font-bold">0</p>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-yellow-500">Pending</h2>
+        <p id="pendingCount" class="text-2xl font-bold">0</p>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-blue-500">In Progress</h2>
+        <p id="progressCount" class="text-2xl font-bold">0</p>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-green-500">Resolved</h2>
+        <p id="resolvedCount" class="text-2xl font-bold">0</p>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+<div class="bg-white p-4 rounded shadow mb-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+
+  <select id="statusFilter" class="border rounded p-2">
+    <option value="">All Status</option>
+    <option value="Pending">Pending</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Resolved">Resolved</option>
+  </select>
+
+  <select id="categoryFilter" class="border rounded p-2">
+    <option value="">All Categories</option>
+  </select>
+
+  <select id="priorityFilter" class="border rounded p-2">
+    <option value="">All Priorities</option>
+    <option value="Low">Low</option>
+    <option value="Medium">Medium</option>
+    <option value="High">High</option>
+  </select>
+
+  <button onclick="applyFilters()"
+    class="bg-indigo-600 text-white rounded p-2 hover:bg-indigo-700">
+    Apply Filters
+  </button>
+
+</div>
+
+
+    <!-- Issues Table -->
+    <div class="bg-white rounded shadow p-4 overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b">
+            <th class="p-2">Title</th>
+            <th class="p-2">Citizen</th>
+            <th class="p-2">Category</th>
+            <th class="p-2">Status</th>
+            <th class="p-2">Priority</th>
+            <th class="p-2">Verified</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="issuesTable"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script src="../assets/js/admin.js"></script>
+</body>
+</html>

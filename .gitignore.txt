@@ -11,5 +11,5 @@ Thumbs.db
 # Node modules (future backend)
 node_modules/
 
-# Env files
+# Env files 
 .env

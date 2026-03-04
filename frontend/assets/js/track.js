@@ -77,13 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     filtered.forEach(issue => {
-      const statusStyles = {
-        'Not Completed': 'bg-red-500/10 text-red-300 border-red-400/40',
-        'Work in Progress': 'bg-yellow-500/10 text-yellow-300 border-yellow-400/40',
-        'Completed': 'bg-emerald-500/10 text-emerald-300 border-emerald-400/40'
-      };
+    const statusStyles = {
+  'Pending': 'bg-red-500/10 text-red-300 border-red-400/40',
+  'In Progress': 'bg-yellow-500/10 text-yellow-300 border-yellow-400/40',
+  'Resolved': 'bg-emerald-500/10 text-emerald-300 border-emerald-400/40'
+};
 
-      const showDelete = issue.status === 'Completed';
+
+      const showDelete = issue.status === 'Resolved';
 
       const card = document.createElement('div');
       card.className = 'bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2';
@@ -170,65 +171,144 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===============================
   // 7. PDF Generator (WITH IMAGES)
   // ===============================
-  function generatePDF(issue) {
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF();
+function generatePDF(issue) {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
 
-    let y = 20;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  let y = 20;
 
-    pdf.setFontSize(16);
-    pdf.text('Fix My Ward – Civic Issue Report', 20, y);
-    y += 12;
+  /* ===============================
+     HEADER
+  =============================== */
 
-    pdf.setFontSize(11);
-    pdf.text(`Reference ID: FM-${issue.id}`, 20, y); y += 7;
-    pdf.text(`Citizen: ${issue.citizen.name}`, 20, y); y += 7;
-    pdf.text(`Email: ${issue.citizen.email}`, 20, y); y += 7;
-    pdf.text(`Category: ${issue.category}`, 20, y); y += 7;
-    pdf.text(`Status: ${issue.status}`, 20, y); y += 7;
-    pdf.text(`Reported On: ${new Date(issue.createdAt).toLocaleString()}`, 20, y);
-    y += 10;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(18);
+  pdf.text("Fix My Ward", 20, y);
 
-    pdf.setFontSize(12);
-    pdf.text('Description:', 20, y); y += 6;
-    pdf.setFontSize(11);
-    pdf.text(issue.description, 20, y, { maxWidth: 170 });
-    y += 15;
+  pdf.setFontSize(10);
+  pdf.setFont("helvetica", "normal");
+  pdf.text("Civic Issue Report Document", 20, y + 6);
 
-    pdf.setFontSize(12);
-    pdf.text('Location:', 20, y); y += 6;
-    pdf.setFontSize(11);
-    pdf.text(issue.locationText || 'Not specified', 20, y);
-    y += 12;
+  pdf.line(20, y + 10, pageWidth - 20, y + 10);
+  y += 18;
 
-    // Images
-    if (issue.photos && issue.photos.length) {
-      pdf.setFontSize(12);
-      pdf.text('Submitted Photos:', 20, y);
-      y += 6;
+  /* ===============================
+     REFERENCE INFO
+  =============================== */
 
-      let x = 20;
-      const size = 40;
+  pdf.setFontSize(11);
 
-      issue.photos.forEach((img, index) => {
-        if (y > 240) {
-          pdf.addPage();
-          y = 20;
-          x = 20;
-        }
+  pdf.text(`Reference ID: FM-${issue.id}`, 20, y); y += 6;
+  pdf.text(`Citizen Name: ${issue.citizen.name}`, 20, y); y += 6;
+  pdf.text(`Email: ${issue.citizen.email}`, 20, y); y += 6;
+  pdf.text(`Reported On: ${new Date(issue.createdAt).toLocaleString()}`, 20, y); 
+  y += 10;
 
-        pdf.addImage(img, 'JPEG', x, y, size, size);
-        x += size + 5;
+  pdf.line(20, y, pageWidth - 20, y);
+  y += 8;
 
-        if (x > 160) {
-          x = 20;
-          y += size + 8;
-        }
-      });
-    }
+  /* ===============================
+     ISSUE SUMMARY SECTION
+  =============================== */
 
-    pdf.save(`FixMyWard_Report_${issue.id}.pdf`);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("Issue Summary", 20, y);
+  y += 8;
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+
+  pdf.text(`Category: ${issue.category}`, 20, y); y += 6;
+  pdf.text(`Status: ${issue.status}`, 20, y); y += 6;
+  pdf.text(`Priority: ${issue.priority}`, 20, y); 
+  y += 10;
+
+  /* ===============================
+     DESCRIPTION SECTION
+  =============================== */
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("Description", 20, y);
+  y += 6;
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+
+  const descriptionLines = pdf.splitTextToSize(issue.description, 170);
+  pdf.text(descriptionLines, 20, y);
+  y += descriptionLines.length * 6 + 6;
+
+  /* ===============================
+     LOCATION SECTION
+  =============================== */
+
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text("Location Details", 20, y);
+  y += 6;
+
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(11);
+
+  pdf.text(issue.locationText || "Not specified", 20, y);
+  y += 6;
+
+  pdf.text(`Latitude: ${issue.lat}`, 20, y); y += 6;
+  pdf.text(`Longitude: ${issue.lng}`, 20, y);
+  y += 10;
+
+  /* ===============================
+     PHOTO SECTION
+  =============================== */
+
+  if (issue.photos && issue.photos.length) {
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(13);
+    pdf.text("Submitted Evidence Photos", 20, y);
+    y += 8;
+
+    let x = 20;
+    const imgSize = 40;
+
+    issue.photos.forEach((img, index) => {
+
+      if (y > 240) {
+        pdf.addPage();
+        y = 20;
+        x = 20;
+      }
+
+      pdf.addImage(img, "JPEG", x, y, imgSize, imgSize);
+
+      x += imgSize + 10;
+
+      if (x > pageWidth - 50) {
+        x = 20;
+        y += imgSize + 10;
+      }
+    });
+
+    y += imgSize + 10;
   }
+
+  /* ===============================
+     FOOTER
+  =============================== */
+
+  pdf.setFontSize(9);
+  pdf.setTextColor(100);
+  pdf.text(
+    "This document was generated digitally by Fix My Ward Civic Reporting System.",
+    20,
+    285
+  );
+
+  pdf.save(`FixMyWard_Report_${issue.id}.pdf`);
+}
 
   // ===============================
   // 8. Events
