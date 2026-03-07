@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Issue Map – Fix My Ward</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<link rel="stylesheet" href="../assets/css/styles.css">
+
+</head>
+
+<body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
+
+
+<!-- HEADER -->
+
+<header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
+
+<button onclick="history.back()"
+class="text-slate-300 hover:text-emerald-400 text-sm font-medium">
+← Back
+</button>
+
+<h1 class="text-emerald-400 font-semibold">
+Issue Map
+</h1>
+
+<div></div>
+
+</header>
+
+
+<!-- MAP SECTION -->
+
+<main class="flex-1 relative">
+
+<!-- Map Controls -->
+
+<div class="absolute top-4 left-4 z-[1000] flex gap-2">
+
+<button id="btn-show-markers"
+class="px-3 py-1 text-xs bg-emerald-500 text-slate-900 rounded">
+Markers
+</button>
+
+<button id="btn-show-heatmap"
+class="px-3 py-1 text-xs bg-slate-800 text-white rounded border border-slate-700">
+Heatmap
+</button>
+
+</div>
+
+
+<div id="public-issues-map"
+class="absolute inset-0"></div>
+
+</main>
+
+
+<footer class="bg-slate-900 border-t border-slate-800 text-center text-xs text-slate-500 p-3">
+© 2026 Fix My Ward
+</footer>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+
+<script src="../assets/js/map.js"></script>
+<script src="../assets/js/loader.js"></script>
+
+</body>
+</html>

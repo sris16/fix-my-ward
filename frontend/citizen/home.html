@@ -1,127 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Citizen Home | Fix My Ward</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Citizen Home | Fix My Ward</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Tailwind CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="stylesheet" href="../assets/css/styles.css">
 </head>
+
 
 <body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-950 to-slate-900">
 
-    <!-- Loading Screen -->
-    <div id="app-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950">
-        <img
-            src="../assets/images/logo.png"
-            alt="Fix My Ward Logo"
-            class="loader-logo w-24 h-24"
-        />
-    </div>
+<!-- Loader -->
+<div id="app-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950">
+<img src="../assets/images/logo.png" class="loader-logo w-24 h-24">
+</div>
 
-    <!-- Header -->
-    <header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
-        <h1 class="text-xl font-semibold text-emerald-400">
-            Fix My Ward
-        </h1>
-        <span id="citizenName" class="text-sm text-slate-400"></span>
-    </header>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-6">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold mb-2">Welcome 👋</h2>
-            <p class="text-sm text-slate-400">
-                What would you like to report today?
-            </p>
-        </div>
+<!-- HEADER -->
+<header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
 
-        <div class="grid gap-5 sm:grid-cols-2">
+<h1 class="text-xl font-semibold text-emerald-400">
+Fix My Ward
+</h1>
 
-            <button onclick="goToReport('Road')"
-                class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
-                <h3 class="text-lg font-semibold text-emerald-400 mb-2">
-                    🚧 Road Related Issues
-                </h3>
-                <p class="text-sm text-slate-400">
-                    Potholes, damaged roads, traffic sign issues and more.
-                </p>
-            </button>
+<div class="flex items-center gap-4">
 
-            <button onclick="goToReport('Water')"
-                class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
-                <h3 class="text-lg font-semibold text-emerald-400 mb-2">
-                    💧 Water & Drainage Issues
-                </h3>
-                <p class="text-sm text-slate-400">
-                    Water leakage, blocked drainage, pipeline problems.
-                </p>
-            </button>
+<span id="citizenName" class="text-sm text-slate-400"></span>
 
-            <button onclick="goToReport('Surroundings')"
-                class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
-                <h3 class="text-lg font-semibold text-emerald-400 mb-2">
-                    💡 Public Surroundings Issues
-                </h3>
-                <p class="text-sm text-slate-400">
-                    Broken streetlights, garbage disposal, public safety concerns.
-                </p>
-            </button>
+<button onclick="goToNotifications()" class="relative">
 
-            <button onclick="goToReports()"
-                class="bg-emerald-500 hover:bg-emerald-400 p-6 rounded-xl text-left transition duration-200 shadow-md">
-                <h3 class="text-lg font-semibold mb-2 text-slate-900">
-                    📋 My Reports
-                </h3>
-                <p class="text-sm text-emerald-900">
-                    View and track your submitted issues.
-                </p>
-            </button>
+<span class="text-xl">🔔</span>
 
-        </div>
-    </main>
+<span id="notification-count"
+class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px]
+px-1.5 py-0.5 rounded-full hidden">
+0
+</span>
 
-    <footer class="bg-slate-900 border-t border-slate-800 text-center text-slate-500 text-xs p-3">
-        © 2026 Fix My Ward
-    </footer>
+</button>
 
-    <script>
-        const profile = JSON.parse(localStorage.getItem("fmw_citizen_profile"));
+</div>
 
-        if (!profile) {
-            window.location.href = "../index.html";
-        } else {
-            document.getElementById("citizenName").textContent = profile.name;
-        }
+</header>
 
-        function showLoaderAndNavigate(url) {
-            const loader = document.getElementById("app-loader");
 
-            if (loader) {
-                loader.style.display = "flex";
-                loader.style.opacity = "1";
-                loader.style.pointerEvents = "auto";
-            }
 
-            setTimeout(() => {
-                window.location.href = url;
-            }, 600);
-        }
+<!-- MAIN -->
+<main class="flex-1 p-6">
 
-        function goToReport(category) {
-            showLoaderAndNavigate(`report.html?category=${category}`);
-        }
+<div class="mb-8">
 
-        function goToReports() {
-            showLoaderAndNavigate("track.html");
-        }
-    </script>
+<h2 class="text-2xl font-bold mb-2">
+Welcome 👋
+</h2>
 
-    <script src="../assets/js/loader.js"></script>
+<p class="text-sm text-slate-400">
+What would you like to report today?
+</p>
+
+</div>
+
+
+
+<div class="grid gap-5 sm:grid-cols-2">
+
+
+<!-- ROAD -->
+<button onclick="goToReport('Road')"
+class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold text-emerald-400 mb-2">
+🚧 Road Related Issues
+</h3>
+
+<p class="text-sm text-slate-400">
+Potholes, damaged roads, traffic sign issues and more.
+</p>
+
+</button>
+
+
+<!-- WATER -->
+<button onclick="goToReport('Water')"
+class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold text-emerald-400 mb-2">
+💧 Water & Drainage Issues
+</h3>
+
+<p class="text-sm text-slate-400">
+Water leakage, blocked drainage, pipeline problems.
+</p>
+
+</button>
+
+
+<!-- SURROUNDINGS -->
+<button onclick="goToReport('Surroundings')"
+class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold text-emerald-400 mb-2">
+💡 Public Surroundings Issues
+</h3>
+
+<p class="text-sm text-slate-400">
+Broken streetlights, garbage disposal, public safety concerns.
+</p>
+
+</button>
+
+
+<!-- MY REPORTS -->
+<button onclick="goToReports()"
+class="bg-emerald-500 hover:bg-emerald-400 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold mb-2 text-slate-900">
+📋 My Reports
+</h3>
+
+<p class="text-sm text-emerald-900">
+View and track your submitted issues.
+</p>
+
+</button>
+
+
+<!-- ISSUE MAP -->
+<button onclick="goToMap()"
+class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold text-emerald-400 mb-2">
+🗺 Issue Map
+</h3>
+
+<p class="text-sm text-slate-400">
+View nearby civic issues and heatmap insights.
+</p>
+
+</button>
+
+
+<!-- PUBLIC REPORTS -->
+<button onclick="goToPublicReports()"
+class="bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 p-6 rounded-xl text-left transition duration-200 shadow-md">
+
+<h3 class="text-lg font-semibold text-emerald-400 mb-2">
+🌍 Public Reports
+</h3>
+
+<p class="text-sm text-slate-400">
+See issues reported by other citizens and upvote them.
+</p>
+
+</button>
+
+
+</div>
+
+</main>
+
+
+
+<footer class="bg-slate-900 border-t border-slate-800 text-center text-slate-500 text-xs p-3">
+© 2026 Fix My Ward
+</footer>
+
+
+
+<script>
+
+const profile = JSON.parse(localStorage.getItem("fmw_citizen_profile"));
+
+if (!profile) {
+window.location.href = "../index.html";
+}
+else {
+document.getElementById("citizenName").textContent = profile.name;
+}
+
+
+/* NAVIGATION */
+
+function showLoaderAndNavigate(url){
+
+const loader=document.getElementById("app-loader");
+
+if(loader){
+loader.style.display="flex";
+loader.style.opacity="1";
+loader.style.pointerEvents="auto";
+}
+
+setTimeout(()=>{
+window.location.href=url;
+},600);
+
+}
+
+function goToReport(category){
+showLoaderAndNavigate(`report.html?category=${category}`);
+}
+
+function goToReports(){
+showLoaderAndNavigate("track.html");
+}
+
+function goToMap(){
+showLoaderAndNavigate("map.html");
+}
+
+function goToPublicReports(){
+showLoaderAndNavigate("public-reports.html");
+}
+
+function goToNotifications(){
+showLoaderAndNavigate("notifications.html");
+}
+
+
+/* NOTIFICATION BADGE */
+
+function updateNotificationCount(){
+
+const notifications =
+JSON.parse(localStorage.getItem("fmw_notifications")) || [];
+
+const unread =
+notifications.filter(n =>
+n.mobile===profile.mobile && !n.read
+);
+
+const badge=document.getElementById("notification-count");
+
+if(unread.length>0){
+
+badge.textContent=unread.length;
+badge.classList.remove("hidden");
+
+}else{
+
+badge.classList.add("hidden");
+
+}
+
+}
+
+updateNotificationCount();
+
+</script>
+
+<script src="../assets/js/loader.js"></script>
 
 </body>
 </html>

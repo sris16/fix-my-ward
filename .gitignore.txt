@@ -1,15 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log
+
 # OS files
 .DS_Store
 Thumbs.db
 
-# Editor folders
-.vscode/
-
-# Logs
-*.log
-
-# Node modules (future backend)
-node_modules/
-
-# Env files 
-.env
+# uploads
+backend/uploads/*
