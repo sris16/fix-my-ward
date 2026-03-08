@@ -1,29 +1,28 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
-const connectDB = require("./config/db");
+import connectDB from "./config/db.js";
+import issueRoutes from "./routes/issueRoutes.js";
+import citizenRoutes from "./routes/citizenRoutes.js";
 
-const citizenRoutes = require("./routes/citizenRoutes");
-const issueRoutes = require("./routes/issueRoutes");
+dotenv.config();
+
+connectDB();
 
 const app = express();
 
-// connect database
-connectDB();
+/* FIX IMAGE SIZE LIMIT */
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use(cors());
-app.use(express.json());
 
-app.use("/api/citizens", citizenRoutes);
 app.use("/api/issues", issueRoutes);
-
-app.get("/", (req, res) => {
-    res.send("Fix My Ward Backend Running 🚀");
-});
+app.use("/api/citizens", citizenRoutes);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+console.log(`Server running on port ${PORT}`);
 });

@@ -1,10 +1,8 @@
 // assets/js/citizen.js
 
-document.addEventListener("DOMContentLoaded", () => {
+window.API = "http://localhost:5000/api";
 
-/* ======================================================
-   PROFILE CHECK
-====================================================== */
+document.addEventListener("DOMContentLoaded", () => {
 
 const profile = JSON.parse(localStorage.getItem("fmw_citizen_profile"));
 
@@ -13,37 +11,28 @@ window.location.href = "../index.html";
 return;
 }
 
-
-/* ======================================================
-   HEADER INFO
-====================================================== */
+/* ================= HEADER ================= */
 
 const nameDisplay = document.getElementById("citizen-name-display");
 const emailDisplay = document.getElementById("citizen-email-display");
 const greetingText = document.getElementById("greeting-text");
 
 if (nameDisplay) nameDisplay.textContent = profile.name;
-if (emailDisplay) emailDisplay.textContent = profile.email;
+if (emailDisplay) emailDisplay.textContent = profile.mobile;
 if (greetingText) greetingText.textContent = `Hello ${profile.name}!`;
 
-
-
-/* ======================================================
-   CATEGORY FROM URL
-====================================================== */
+/* ================= CATEGORY ================= */
 
 const urlParams = new URLSearchParams(window.location.search);
 const selectedCategory = urlParams.get("category") || "General";
 
 const categoryDisplay = document.getElementById("selected-category-display");
 
-if (categoryDisplay) categoryDisplay.textContent = selectedCategory;
+if (categoryDisplay) {
+categoryDisplay.textContent = selectedCategory;
+}
 
-
-
-/* ======================================================
-   CATEGORY BASED PLACEHOLDER
-====================================================== */
+/* ================= PLACEHOLDERS ================= */
 
 const titleInput = document.getElementById("issue-title");
 const descInput = document.getElementById("issue-description");
@@ -64,24 +53,20 @@ if (selectedCategory === "Surroundings") {
 titleInput.placeholder = "e.g. Streetlight not working";
 
 descInput.placeholder =
-"Describe the surroundings issue. Example: Garbage pile not cleared for 3 days.";
+"Describe the surroundings issue. Example: Garbage pile not cleared.";
 
 }
 
 }
 
-
-
-/* ======================================================
-   PHOTO UPLOAD
-====================================================== */
+/* ================= PHOTO UPLOAD ================= */
 
 const photoInput = document.getElementById("issue-photo");
 const previewContainer = document.getElementById("photo-preview");
 
 let photoBase64Array = [];
 
-if (photoInput) {
+if (photoInput && previewContainer) {
 
 photoInput.addEventListener("change", () => {
 
@@ -89,7 +74,6 @@ const files = Array.from(photoInput.files);
 
 if (files.length > 4) {
 alert("Maximum 4 photos allowed.");
-photoInput.value = "";
 return;
 }
 
@@ -107,6 +91,7 @@ photoBase64Array.push(e.target.result);
 const img = document.createElement("img");
 
 img.src = e.target.result;
+
 img.className =
 "w-20 h-20 object-cover rounded-lg border border-slate-700";
 
@@ -122,25 +107,21 @@ reader.readAsDataURL(file);
 
 }
 
-
-
-/* ======================================================
-   ISSUE SUBMIT
-====================================================== */
+/* ================= ISSUE SUBMIT ================= */
 
 const issueForm = document.getElementById("issue-form");
 
-if (!issueForm) return;
+if (issueForm) {
 
-issueForm.addEventListener("submit", function (event) {
+issueForm.addEventListener("submit", async function (event) {
 
 event.preventDefault();
 
-const title = titleInput.value.trim();
-const description = descInput.value.trim();
+const title = titleInput?.value.trim();
+const description = descInput?.value.trim();
 
 const locationText =
-document.getElementById("issue-location-text").value.trim();
+document.getElementById("issue-location-text")?.value.trim();
 
 const lat = window.fmwMapState?.selectedLat;
 const lng = window.fmwMapState?.selectedLng;
@@ -155,21 +136,20 @@ alert("Please select a location on the map.");
 return;
 }
 
+try {
 
-let issues = JSON.parse(localStorage.getItem("fmw_issues")) || [];
+/* ================= LOAD ISSUES ================= */
 
+const response = await fetch(`${API}/issues`);
+const issues = await response.json();
 
-/* ======================================================
-   STEP 7 — DUPLICATE DETECTION
-====================================================== */
+/* ================= DUPLICATE DETECTION ================= */
 
 const duplicate = issues.find(issue => {
 
 const distance = getDistance(lat, lng, issue.lat, issue.lng);
 
-const sameCategory = issue.category === selectedCategory;
-
-return distance < 0.3 && sameCategory;
+return distance < 0.3 && issue.category === selectedCategory;
 
 });
 
@@ -181,17 +161,16 @@ const confirmUpvote = confirm(
 
 if (confirmUpvote) {
 
-const email = profile.email;
+await fetch(`${API}/issues/upvote`, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+issueId: duplicate._id,
+mobile: profile.mobile
+})
+});
 
-if (!duplicate.upvotes) duplicate.upvotes = [];
-
-if (!duplicate.upvotes.includes(email)) {
-duplicate.upvotes.push(email);
-}
-
-localStorage.setItem("fmw_issues", JSON.stringify(issues));
-
-alert("You have upvoted the existing issue.");
+alert("You upvoted the existing issue.");
 
 window.location.href = "public-reports.html";
 
@@ -201,27 +180,9 @@ return;
 
 }
 
-
-
-/* ======================================================
-   STEP 8 — PRIORITY ENGINE
-====================================================== */
-
-const priority = calculatePriority(issues, lat, lng);
-
-
-/* ======================================================
-   CREATE NEW ISSUE
-====================================================== */
+/* ================= CREATE ISSUE ================= */
 
 const newIssue = {
-
-id: "ISSUE-" + Date.now(),
-
-citizen: {
-name: profile.name,
-mobile: profile.mobile,
-},
 
 title,
 category: selectedCategory,
@@ -233,34 +194,35 @@ lng,
 
 photos: photoBase64Array,
 
-status: "Pending",
-priority: priority,
-
-department: null,
-verified: false,
-
-upvotes: [],
-
-createdAt: new Date().toISOString(),
-updatedAt: new Date().toISOString()
+citizen: {
+name: profile.name,
+mobile: profile.mobile
+}
 
 };
 
-issues.push(newIssue);
-
-localStorage.setItem("fmw_issues", JSON.stringify(issues));
+await fetch(`${API}/issues`, {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(newIssue)
+});
 
 window.location.href = "track.html";
 
-});
+} catch (error) {
+
+console.error(error);
+alert("Something went wrong while submitting the issue.");
+
+}
 
 });
 
+}
 
+});
 
-/* ======================================================
-   DISTANCE FUNCTION
-====================================================== */
+/* ================= DISTANCE ================= */
 
 function getDistance(lat1, lon1, lat2, lon2) {
 
@@ -279,35 +241,5 @@ Math.sin(dLon/2);
 const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
 return R * c;
-
-}
-
-
-
-/* ======================================================
-   STEP 8 — PRIORITY CALCULATOR
-====================================================== */
-
-function calculatePriority(issues, lat, lng) {
-
-let nearbyVotes = 0;
-
-issues.forEach(issue => {
-
-const distance = getDistance(lat, lng, issue.lat, issue.lng);
-
-if (distance < 1) {
-nearbyVotes += issue.upvotes?.length || 0;
-}
-
-});
-
-if (nearbyVotes > 20) return "Critical";
-
-if (nearbyVotes > 10) return "High";
-
-if (nearbyVotes > 5) return "Medium";
-
-return "Normal";
 
 }

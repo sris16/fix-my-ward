@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Public Reports | Fix My Ward</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="../assets/css/styles.css">
+
+</head>
+
+<body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
+
+<header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
+
+<h1 class="text-lg font-semibold text-emerald-400">
+Public Civic Reports
+</h1>
+
+<button onclick="history.back()"
+class="text-sm text-slate-300 hover:text-emerald-400">
+← Back
+</button>
+
+</header>
+
+
+<main class="flex-1 p-6 max-w-3xl mx-auto">
+
+<p class="text-sm text-slate-400 mb-4">
+Nearby issues reported by other citizens.
+</p>
+
+<div id="public-issues-list" class="space-y-4"></div>
+
+<p id="no-public-issues"
+class="hidden text-sm text-slate-400 text-center mt-6">
+No nearby civic issues reported.
+</p>
+
+</main>
+
+
+<script src="../assets/js/publicReports.js"></script>
+
+</body>
+</html>
