@@ -6,38 +6,83 @@
 <title>Notifications | Fix My Ward</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
 
+<!-- Custom CSS -->
 <link rel="stylesheet" href="../assets/css/styles.css">
 
 </head>
 
 <body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
 
-<header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between">
+<!-- Header -->
+<header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
 
-<button onclick="history.back()" class="text-sm text-slate-400 hover:text-white">
+<div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
+
+<button
+onclick="history.back()"
+class="flex items-center gap-1 text-slate-300 hover:text-emerald-400 text-sm font-medium transition">
 ← Back
 </button>
 
-<h1 class="text-emerald-400 font-semibold">
-Notifications
-</h1>
+<div class="flex items-center gap-2">
+
+<img
+src="../assets/images/logo.png"
+alt="Fix My Ward"
+class="h-8 w-8 rounded-lg shadow-md"
+/>
+
+<div>
+<p class="text-xs text-slate-400">Fix My Ward</p>
+<h1 class="text-sm font-semibold">Notifications</h1>
+</div>
+
+</div>
 
 <div></div>
 
+</div>
+
 </header>
 
-<main class="flex-1 p-6 space-y-4">
 
-<div id="notifications-list"></div>
+<!-- Main -->
+<main class="flex-1 max-w-3xl mx-auto px-4 py-5 space-y-4">
 
-<p id="no-notifications" class="text-center text-slate-400 hidden">
-No notifications yet.
+<!-- Info Card -->
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+
+<p class="text-sm font-medium">
+Your civic issue updates will appear here.
 </p>
+
+<p class="text-xs text-slate-400 mt-1">
+Stay informed when your reports are verified, being worked on, or resolved.
+</p>
+
+</div>
+
+
+<!-- Notifications List -->
+<div id="notifications-list" class="space-y-3"></div>
+
+
+<!-- Empty State -->
+<div
+id="no-notifications"
+class="hidden text-center text-sm text-slate-400 pt-6">
+
+No notifications yet.
+
+</div>
 
 </main>
 
+
+<!-- JS -->
 <script src="../assets/js/notifications.js"></script>
 
 </body>

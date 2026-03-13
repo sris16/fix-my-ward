@@ -114,6 +114,33 @@ res.status(500).json({ message: error.message });
 
 
 
+// Delete Issue (NEW FEATURE)
+exports.deleteIssue = async (req, res) => {
+
+try {
+
+const { id } = req.params;
+
+const issue = await Issue.findById(id);
+
+if (!issue) {
+return res.status(404).json({ message: "Issue not found" });
+}
+
+await Issue.findByIdAndDelete(id);
+
+res.json({ message: "Issue deleted successfully" });
+
+} catch (error) {
+
+res.status(500).json({ message: error.message });
+
+}
+
+};
+
+
+
 // Distance Helper
 function getDistance(lat1, lon1, lat2, lon2) {
 

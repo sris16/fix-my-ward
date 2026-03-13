@@ -109,8 +109,43 @@ const hasVoted = issue.upvotes.includes(userMobile);
 const card = document.createElement("div");
 
 card.className =
-"bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2";
+"bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3";
 
+
+/* ===============================
+IMAGE PREVIEW
+================================ */
+
+let imageHTML = "";
+
+if(issue.photos && issue.photos.length){
+
+imageHTML = `
+<div class="grid grid-cols-4 gap-2">
+${issue.photos.map(photo => `
+<img src="${photo}"
+class="w-full h-20 object-cover rounded-lg border border-slate-700">
+`).join("")}
+</div>
+`;
+
+}
+
+
+/* ===============================
+ADDRESS DISPLAY
+================================ */
+
+const addressHTML = issue.locationText ? `
+<p class="text-xs text-slate-400">
+📍 ${issue.locationText}
+</p>
+` : "";
+
+
+/* ===============================
+CARD CONTENT
+================================ */
 
 card.innerHTML = `
 
@@ -135,18 +170,19 @@ ${issue.status}
 
 </div>
 
+${addressHTML}
+
+${imageHTML}
 
 <p class="text-xs text-slate-300">
 ${issue.description}
 </p>
-
 
 <div class="flex justify-between items-center pt-2">
 
 <span class="text-xs text-slate-400">
 👍 ${issue.upvotes.length} upvotes
 </span>
-
 
 <button
 class="upvote-btn text-xs px-3 py-1 rounded-lg font-semibold

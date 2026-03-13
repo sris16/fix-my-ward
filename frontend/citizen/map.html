@@ -7,32 +7,50 @@
 
 <title>Issue Map – Fix My Ward</title>
 
+<!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
 
+<!-- Leaflet CSS -->
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
+<!-- Custom CSS -->
 <link rel="stylesheet" href="../assets/css/styles.css">
 
 </head>
 
 <body class="bg-slate-950 text-slate-50 min-h-screen flex flex-col">
 
-
 <!-- HEADER -->
 
-<header class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
+<header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
 
-<button onclick="history.back()"
-class="text-slate-300 hover:text-emerald-400 text-sm font-medium">
+<div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+
+<button
+onclick="history.back()"
+class="flex items-center gap-1 text-slate-300 hover:text-emerald-400 text-sm font-medium transition">
 ← Back
 </button>
 
-<h1 class="text-emerald-400 font-semibold">
-Issue Map
-</h1>
+<div class="flex items-center gap-2">
+
+<img
+src="../assets/images/logo.png"
+alt="Fix My Ward"
+class="h-8 w-8 rounded-lg shadow-md"
+/>
+
+<div>
+<p class="text-xs text-slate-400">Fix My Ward</p>
+<h1 class="text-sm font-semibold">Issue Map</h1>
+</div>
+
+</div>
 
 <div></div>
+
+</div>
 
 </header>
 
@@ -41,39 +59,57 @@ Issue Map
 
 <main class="flex-1 relative">
 
-<!-- Map Controls -->
+
+<!-- MAP CONTROLS -->
 
 <div class="absolute top-4 left-4 z-[1000] flex gap-2">
 
-<button id="btn-show-markers"
-class="px-3 py-1 text-xs bg-emerald-500 text-slate-900 rounded">
+<button
+id="toggle-markers"
+class="px-3 py-1 text-xs bg-emerald-500 text-slate-900 rounded-lg shadow">
 Markers
 </button>
 
-<button id="btn-show-heatmap"
-class="px-3 py-1 text-xs bg-slate-800 text-white rounded border border-slate-700">
+<button
+id="toggle-heatmap"
+class="px-3 py-1 text-xs bg-slate-800 text-white rounded-lg border border-slate-700 shadow">
 Heatmap
 </button>
 
 </div>
 
 
-<div id="public-issues-map"
-class="absolute inset-0"></div>
+<!-- MAP CONTAINER -->
+
+<div
+id="map"
+class="absolute inset-0">
+</div>
 
 </main>
 
+
+<!-- FOOTER -->
 
 <footer class="bg-slate-900 border-t border-slate-800 text-center text-xs text-slate-500 p-3">
 © 2026 Fix My Ward
 </footer>
 
 
+<!-- Leaflet JS -->
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Heatmap Plugin -->
 
 <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 
+<!-- Map Logic -->
+
 <script src="../assets/js/map.js"></script>
+
+<!-- Loader -->
+
 <script src="../assets/js/loader.js"></script>
 
 </body>

@@ -1,221 +1,237 @@
-// assets/js/map.js
+const API = "http://localhost:5000/api";
 
-document.addEventListener("DOMContentLoaded", () => {
+/* =====================================================
+   ISSUE MAP PAGE (Markers + Heatmap)
+===================================================== */
 
-    /* ======================================================
-       REPORT PAGE MAP (report.html)
-    ====================================================== */
+const issueMapContainer = document.getElementById("map");
 
-    const reportMapContainer = document.getElementById("issue-map");
+if (issueMapContainer) {
 
-    if (reportMapContainer) {
+const map = L.map("map").setView([11.0168, 76.9558], 12);
 
-        window.fmwMapState = {
-            selectedLat: null,
-            selectedLng: null
-        };
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+maxZoom: 19
+}).addTo(map);
 
-        const latInput = document.getElementById("issue-lat");
-        const lngInput = document.getElementById("issue-lng");
+const markerLayer = L.layerGroup().addTo(map);
 
-        const map = L.map("issue-map").setView([11.0168, 76.9558], 13);
+let heatPoints = [];
+let heatLayer;
 
-        L.tileLayer(
-            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            { attribution: "&copy; OpenStreetMap contributors" }
-        ).addTo(map);
+/* LOAD ISSUES */
 
-        // FIX FOR FLEX / TAILWIND LAYOUT
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 300);
+async function loadIssues(){
 
-        let marker = null;
+try{
 
-        function updateLocation(lat, lng) {
+const response = await fetch(`${API}/issues`);
+const issues = await response.json();
 
-            window.fmwMapState.selectedLat = lat;
-            window.fmwMapState.selectedLng = lng;
+console.log("Loaded issues:", issues);
 
-            if (latInput) latInput.value = lat.toFixed(6);
-            if (lngInput) lngInput.value = lng.toFixed(6);
-        }
+markerLayer.clearLayers();
+heatPoints = [];
 
-        map.on("click", (e) => {
+let bounds = [];
 
-            const { lat, lng } = e.latlng;
+issues.forEach(issue => {
 
-            if (marker) {
-                marker.setLatLng([lat, lng]);
-            } else {
+if(!issue.lat || !issue.lng) return;
 
-                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+/* CREATE MARKER */
 
-                marker.on("dragend", (event) => {
+const marker = L.marker([issue.lat, issue.lng]);
 
-                    const pos = event.target.getLatLng();
-                    updateLocation(pos.lat, pos.lng);
+marker.bindPopup(`
+<b>${issue.title}</b><br>
+${issue.category}<br>
+Status: ${issue.status}
+`);
 
-                });
+markerLayer.addLayer(marker);
 
-            }
+/* ADD HEAT DATA */
 
-            updateLocation(lat, lng);
+heatPoints.push([issue.lat, issue.lng, 0.7]);
 
-        });
+/* SAVE LOCATION FOR AUTO ZOOM */
 
-        /* ===============================
-           USE CURRENT LOCATION
-        =============================== */
-
-        const useLocationBtn = document.getElementById("btn-use-location");
-
-        if (useLocationBtn) {
-
-            useLocationBtn.addEventListener("click", () => {
-
-                if (!navigator.geolocation) {
-                    alert("Geolocation not supported.");
-                    return;
-                }
-
-                navigator.geolocation.getCurrentPosition(
-
-                    (position) => {
-
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-
-                        map.setView([lat, lng], 16);
-
-                        if (marker) {
-                            marker.setLatLng([lat, lng]);
-                        } else {
-                            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-                        }
-
-                        updateLocation(lat, lng);
-
-                    },
-
-                    () => {
-                        alert("Unable to fetch your location.");
-                    }
-
-                );
-
-            });
-
-        }
-
-        /* ===============================
-           FULLSCREEN MAP
-        =============================== */
-
-        const fullscreenBtn = document.getElementById("btn-fullscreen-map");
-        const closeBtn = document.getElementById("btn-close-fullscreen");
-        const overlay = document.getElementById("map-fullscreen-overlay");
-
-        let fullscreenMap = null;
-
-        if (fullscreenBtn && overlay) {
-
-            fullscreenBtn.addEventListener("click", () => {
-
-                overlay.classList.remove("hidden");
-
-                setTimeout(() => {
-
-                    fullscreenMap = L.map("issue-map-fullscreen").setView(
-                        map.getCenter(),
-                        map.getZoom()
-                    );
-
-                    L.tileLayer(
-                        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        { attribution: "&copy; OpenStreetMap contributors" }
-                    ).addTo(fullscreenMap);
-
-                    fullscreenMap.invalidateSize();
-
-                }, 200);
-
-            });
-
-        }
-
-        if (closeBtn && overlay) {
-
-            closeBtn.addEventListener("click", () => {
-
-                overlay.classList.add("hidden");
-
-                if (fullscreenMap) {
-                    fullscreenMap.remove();
-                    fullscreenMap = null;
-                }
-
-            });
-
-        }
-
-    }
-
-
-
-    /* ======================================================
-       PUBLIC ISSUE MAP (map.html)
-    ====================================================== */
-
-    const publicMapContainer = document.getElementById("public-issues-map");
-
-    if (publicMapContainer) {
-
-        const profile = JSON.parse(localStorage.getItem("fmw_citizen_profile"));
-
-        if (!profile) return;
-
-        const userMobile = profile.mobile;
-
-        navigator.geolocation.getCurrentPosition(
-
-            (position) => {
-
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-
-                const map = L.map("public-issues-map").setView([userLat, userLng], 14);
-
-                L.tileLayer(
-                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                    { attribution: "&copy; OpenStreetMap contributors" }
-                ).addTo(map);
-
-                L.marker([userLat, userLng])
-                    .addTo(map)
-                    .bindPopup("📍 You are here")
-                    .openPopup();
-
-                let issues = JSON.parse(localStorage.getItem("fmw_issues")) || [];
-
-                const markerLayer = L.layerGroup().addTo(map);
-
-                issues.forEach(issue => {
-
-                    const marker = L.marker([issue.lat, issue.lng]).addTo(markerLayer);
-
-                    marker.bindPopup(`
-                        <b>${issue.title}</b><br>
-                        ${issue.description}<br>
-                        👍 ${issue.upvotes?.length || 0}
-                    `);
-
-                });
-
-            }
-
-        );
-
-    }
+bounds.push([issue.lat, issue.lng]);
 
 });
+
+/* CREATE HEATMAP */
+
+createHeatmap();
+
+/* AUTO ZOOM TO ISSUES */
+
+if(bounds.length > 0){
+map.fitBounds(bounds,{padding:[40,40]});
+}
+
+}catch(error){
+
+console.error("Failed to load issues", error);
+
+}
+
+}
+
+/* CREATE HEATMAP */
+
+function createHeatmap(){
+
+if(heatLayer){
+map.removeLayer(heatLayer);
+}
+
+heatLayer = L.heatLayer(heatPoints,{
+radius:25,
+blur:20,
+maxZoom:17
+}).addTo(map);
+
+}
+
+/* TOGGLE MARKERS */
+
+document.getElementById("toggle-markers")
+?.addEventListener("click",()=>{
+
+if(map.hasLayer(markerLayer)){
+map.removeLayer(markerLayer);
+}else{
+map.addLayer(markerLayer);
+}
+
+});
+
+/* TOGGLE HEATMAP */
+
+document.getElementById("toggle-heatmap")
+?.addEventListener("click",()=>{
+
+if(map.hasLayer(heatLayer)){
+map.removeLayer(heatLayer);
+}else{
+map.addLayer(heatLayer);
+}
+
+});
+
+loadIssues();
+
+}
+
+
+/* =====================================================
+   REPORT ISSUE PAGE (Location Picker)
+===================================================== */
+
+const reportMapContainer = document.getElementById("issue-map");
+
+if (reportMapContainer) {
+
+const map = L.map("issue-map").setView([11.0168, 76.9558], 13);
+
+L.tileLayer(
+"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+{
+attribution:
+'© OpenStreetMap contributors © CARTO',
+subdomains: "abcd",
+maxZoom: 19
+}
+).addTo(map);
+
+let marker;
+
+/* MAP CLICK */
+
+map.on("click", async function(e){
+
+const { lat, lng } = e.latlng;
+
+/* SET LAT LNG */
+
+document.getElementById("issue-lat").value = lat.toFixed(6);
+document.getElementById("issue-lng").value = lng.toFixed(6);
+
+/* MARKER */
+
+if(marker){
+map.removeLayer(marker);
+}
+
+marker = L.marker([lat,lng]).addTo(map);
+
+/* =========================
+   REVERSE GEOCODING
+========================= */
+
+try{
+
+const response = await fetch(
+`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+);
+
+const data = await response.json();
+
+if(data.display_name){
+
+document.getElementById("issue-location-text").value =
+data.display_name;
+
+}
+
+}catch(error){
+
+console.warn("Address lookup failed");
+
+}
+
+});
+
+/* GPS LOCATION */
+
+document.getElementById("btn-use-location")
+?.addEventListener("click",()=>{
+
+if(!navigator.geolocation){
+alert("Geolocation not supported");
+return;
+}
+
+navigator.geolocation.getCurrentPosition(
+pos => {
+
+const lat = pos.coords.latitude;
+const lng = pos.coords.longitude;
+
+document.getElementById("issue-lat").value = lat.toFixed(6);
+document.getElementById("issue-lng").value = lng.toFixed(6);
+
+map.setView([lat,lng],15);
+
+if(marker){
+map.removeLayer(marker);
+}
+
+marker = L.marker([lat,lng]).addTo(map);
+
+},
+error => {
+alert("Unable to detect your location.");
+},
+{
+enableHighAccuracy: true,
+timeout: 10000,
+maximumAge: 0
+}
+);
+
+});
+
+}

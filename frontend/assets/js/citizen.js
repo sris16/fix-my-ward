@@ -123,8 +123,10 @@ const description = descInput?.value.trim();
 const locationText =
 document.getElementById("issue-location-text")?.value.trim();
 
-const lat = window.fmwMapState?.selectedLat;
-const lng = window.fmwMapState?.selectedLng;
+/* FIXED LOCATION FETCH */
+
+const lat = parseFloat(document.getElementById("issue-lat")?.value);
+const lng = parseFloat(document.getElementById("issue-lng")?.value);
 
 if (!title || !description) {
 alert("Please fill all required fields.");
