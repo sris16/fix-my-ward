@@ -1,20 +1,19 @@
-const express = require("express");
-const router = express.Router();
+import express from "express";
 
-const {
+import {
 createIssue,
 getPublicIssues,
 getNearbyIssues,
 upvoteIssue,
 deleteIssue
-} = require("../controllers/issueController");
+} from "../controllers/issueController.js";
+
+const router = express.Router();
 
 router.post("/", createIssue);
 router.get("/", getPublicIssues);
 router.get("/nearby", getNearbyIssues);
 router.post("/upvote", upvoteIssue);
-
-// Delete Issue Route
 router.delete("/:id", deleteIssue);
 
-module.exports = router;
+export default router;

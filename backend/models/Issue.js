@@ -1,86 +1,90 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const issueSchema = new mongoose.Schema({
 
-    title: {
-        type: String,
-        required: true
-    },
+title: {
+type: String,
+required: true
+},
 
-    category: {
-        type: String,
-        required: true,
-        enum: ["Road", "Water", "Surroundings"]
-    },
+category: {
+type: String,
+required: true,
+enum: ["Road", "Water", "Surroundings"]
+},
 
-    description: {
-        type: String,
-        required: true
-    },
+description: {
+type: String,
+required: true
+},
 
-    locationText: {
-        type: String
-    },
+locationText: {
+type: String
+},
 
-    lat: {
-        type: Number,
-        required: true
-    },
+lat: {
+type: Number,
+required: true
+},
 
-    lng: {
-        type: Number,
-        required: true
-    },
+lng: {
+type: Number,
+required: true
+},
 
-    photos: [
-        {
-            type: String
-        }
-    ],
+photos: [
+{
+type: String
+}
+],
 
-    status: {
-        type: String,
-        default: "Pending",
-        enum: ["Pending", "In Progress", "Resolved"]
-    },
+status: {
+type: String,
+default: "Pending",
+enum: ["Pending", "In Progress", "Resolved"]
+},
 
-    priority: {
-        type: String,
-        default: "Normal",
-        enum: ["Low", "Normal", "High"]
-    },
+priority: {
+type: String,
+default: "Normal",
+enum: ["Low", "Normal", "High"]
+},
 
-    department: {
-        type: String,
-        default: null
-    },
+department: {
+type: String,
+default: null
+},
 
-    verified: {
-        type: Boolean,
-        default: false
-    },
+verified: {
+type: Boolean,
+default: false
+},
 
-    citizen: {
-        name: String,
-        mobile: String
-    },
+citizen: {
+name: String,
+mobile: String
+},
 
-    upvotes: [
-        {
-            type: String
-        }
-    ],
+upvotes: [
+{
+type: String
+}
+],
 
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
+createdAt: {
+type: Date,
+default: Date.now
+},
 
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+updatedAt: {
+type: Date,
+default: Date.now
+}
 
 });
 
-module.exports = mongoose.model("Issue", issueSchema);
+const Issue =
+  mongoose.models.Issue ||
+  mongoose.model("Issue", issueSchema);
+
+export default Issue;

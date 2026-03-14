@@ -1,8 +1,7 @@
-const Issue = require("../models/Issue");
-
+import Issue from "../models/Issue.js";
 
 // Create Issue
-exports.createIssue = async (req, res) => {
+export const createIssue = async (req, res) => {
 
 try {
 
@@ -23,7 +22,7 @@ res.status(500).json({ message: error.message });
 
 
 // Get All Public Issues
-exports.getPublicIssues = async (req, res) => {
+export const getPublicIssues = async (req, res) => {
 
 try {
 
@@ -42,7 +41,7 @@ res.status(500).json({ message: error.message });
 
 
 // Get Nearby Issues
-exports.getNearbyIssues = async (req, res) => {
+export const getNearbyIssues = async (req, res) => {
 
 try {
 
@@ -76,7 +75,7 @@ res.status(500).json({ message: error.message });
 
 
 // Upvote Issue
-exports.upvoteIssue = async (req, res) => {
+export const upvoteIssue = async (req, res) => {
 
 try {
 
@@ -115,7 +114,7 @@ res.status(500).json({ message: error.message });
 
 
 // Delete Issue (NEW FEATURE)
-exports.deleteIssue = async (req, res) => {
+export const deleteIssue = async (req, res) => {
 
 try {
 

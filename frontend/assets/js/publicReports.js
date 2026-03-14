@@ -13,29 +13,33 @@ return;
 
 const userMobile = profile.mobile;
 
-const nameDisplay = document.getElementById("citizen-name-display");
-const emailDisplay = document.getElementById("citizen-email-display");
-
-if (nameDisplay) nameDisplay.textContent = profile.name;
-if (emailDisplay) emailDisplay.textContent = profile.mobile;
-
 const issuesContainer = document.getElementById("public-issues-list");
 const noIssuesMsg = document.getElementById("no-public-issues");
 
+
+/* ===============================
+GET USER LOCATION
+================================ */
 
 navigator.geolocation.getCurrentPosition(
 
 position => {
 
-const userLat = position.coords.latitude;
-const userLng = position.coords.longitude;
+const userLat = parseFloat(position.coords.latitude);
+const userLng = parseFloat(position.coords.longitude);
+
+console.log("User location:", userLat, userLng);
 
 loadNearbyIssues(userLat,userLng);
 
 },
 
 () => {
-alert("Location permission is required.");
+
+console.warn("Location permission denied — loading without distance");
+
+loadNearbyIssues(null,null);
+
 }
 
 );
@@ -51,33 +55,64 @@ async function loadNearbyIssues(userLat,userLng){
 const res = await fetch(`${API}/issues`);
 let issues = await res.json();
 
+console.log("Issues from API:", issues);
+
 const now = Date.now();
 
-issues = issues.filter(issue => {
+/* PROCESS ISSUES */
+
+issues.forEach(issue => {
 
 if(!issue.upvotes) issue.upvotes=[];
+
+/* Hide resolved issues after 48 hours */
 
 if(issue.status==="Resolved"){
 
 const updated = new Date(issue.updatedAt).getTime();
 const diffHours = (now - updated) / (1000*60*60);
 
-if(diffHours>48) return false;
+if(diffHours>48){
+issue.hidden = true;
+return;
+}
 
 }
 
+/* Distance calculation */
+
+if(userLat && userLng && issue.lat && issue.lng){
+
 const distance = getDistance(
-userLat,
-userLng,
-issue.lat,
-issue.lng
+parseFloat(userLat),
+parseFloat(userLng),
+parseFloat(issue.lat),
+parseFloat(issue.lng)
 );
 
 issue.distance = distance;
 
-return distance <= 5;
+}else{
+
+issue.distance = 0;
+
+}
 
 });
+
+
+/* ===============================
+FILTER BY 10 KM
+================================ */
+
+issues = issues.filter(issue => {
+
+if(issue.hidden) return false;
+
+return issue.distance <= 10;
+
+});
+
 
 renderIssues(issues);
 
@@ -112,9 +147,7 @@ card.className =
 "bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3";
 
 
-/* ===============================
-IMAGE PREVIEW
-================================ */
+/* IMAGE PREVIEW */
 
 let imageHTML = "";
 
@@ -132,9 +165,7 @@ class="w-full h-20 object-cover rounded-lg border border-slate-700">
 }
 
 
-/* ===============================
-ADDRESS DISPLAY
-================================ */
+/* ADDRESS */
 
 const addressHTML = issue.locationText ? `
 <p class="text-xs text-slate-400">
@@ -143,9 +174,7 @@ const addressHTML = issue.locationText ? `
 ` : "";
 
 
-/* ===============================
-CARD CONTENT
-================================ */
+/* CARD */
 
 card.innerHTML = `
 

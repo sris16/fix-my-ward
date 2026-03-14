@@ -1,27 +1,29 @@
-const Citizen = require("../models/Citizen");
+import Citizen from "../models/Citizen.js";
 
-// Register Citizen
-exports.registerCitizen = async (req, res) => {
+/* =========================
+   REGISTER CITIZEN
+========================= */
+
+export const registerCitizen = async (req, res) => {
 
 try {
 
-const { name, mobile, email } = req.body;
+const { name, mobile } = req.body;
 
 let citizen = await Citizen.findOne({ mobile });
 
-if (citizen) {
-return res.json(citizen);
-}
+if (!citizen) {
 
 citizen = new Citizen({
 name,
-mobile,
-email
+mobile
 });
 
 await citizen.save();
 
-res.status(201).json(citizen);
+}
+
+res.json(citizen);
 
 } catch (error) {
 
@@ -32,8 +34,11 @@ res.status(500).json({ message: error.message });
 };
 
 
-// Get Citizen by Mobile
-exports.getCitizen = async (req, res) => {
+/* =========================
+   GET CITIZEN
+========================= */
+
+export const getCitizen = async (req, res) => {
 
 try {
 
