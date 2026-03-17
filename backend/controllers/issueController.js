@@ -111,6 +111,33 @@ res.status(500).json({ message: error.message });
 
 };
 
+// Update Issue (ADMIN FEATURE)
+export const updateIssue = async (req, res) => {
+
+try {
+
+const { id } = req.params;
+
+const updatedIssue = await Issue.findByIdAndUpdate(
+id,
+{ ...req.body, updatedAt: Date.now() },
+{ new: true }
+);
+
+if (!updatedIssue) {
+return res.status(404).json({ message: "Issue not found" });
+}
+
+res.json(updatedIssue);
+
+} catch (error) {
+
+res.status(500).json({ message: error.message });
+
+}
+
+};
+
 
 
 // Delete Issue (NEW FEATURE)

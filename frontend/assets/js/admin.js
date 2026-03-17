@@ -2,21 +2,20 @@ document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
 });
 
-const STORAGE_KEY = "fmw_issues";
+const API_URL = "http://localhost:5000/api/issues";
 
-function getIssues() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+async function getIssues() {
+  const response = await fetch(API_URL);
+  const issues = await response.json();
+  return issues;
 }
 
-function saveIssues(issues) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(issues));
-}
+async function loadDashboard() {
+  const issues = await getIssues();
 
-function loadDashboard() {
-  const issues = getIssues();
   renderStats(issues);
   populateCategoryFilter(issues);
-renderTable(issues);
+  renderTable(issues);
 }
 
 function renderStats(issues) {
@@ -46,7 +45,6 @@ function populateCategoryFilter(issues) {
   });
 }
 
-
 function renderTable(issues) {
   const table = document.getElementById("issuesTable");
   table.innerHTML = "";
@@ -55,54 +53,78 @@ function renderTable(issues) {
     const row = document.createElement("tr");
     row.className = "border-b hover:bg-gray-50";
 
-    row.innerHTML = `
-      <td class="p-2">${issue.title}</td>
-      <td class="p-2">${issue.citizen?.name || "N/A"}</td>
-      <td class="p-2">${issue.category}</td>
-      <td class="p-2">
-        <select onchange="updateField('${issue.id}', 'status', this.value)"
-          class="border rounded p-1">
-          <option ${issue.status === "Pending" ? "selected" : ""}>Pending</option>
-          <option ${issue.status === "In Progress" ? "selected" : ""}>In Progress</option>
-          <option ${issue.status === "Resolved" ? "selected" : ""}>Resolved</option>
-        </select>
-      </td>
-      <td class="p-2">
-        <select onchange="updateField('${issue.id}', 'priority', this.value)"
-          class="border rounded p-1">
-          <option ${issue.priority === "Low" ? "selected" : ""}>Low</option>
-          <option ${issue.priority === "Medium" ? "selected" : ""}>Medium</option>
-          <option ${issue.priority === "High" ? "selected" : ""}>High</option>
-        </select>
-      </td>
-      <td class="p-2">
-        <input type="checkbox"
-          ${issue.verified ? "checked" : ""}
-          onchange="updateField('${issue.id}', 'verified', this.checked)">
-      </td>
-      <td class="p-2 text-sm text-gray-500">
-        ${new Date(issue.createdAt).toLocaleDateString()}
-      </td>
-    `;
+   row.innerHTML = `
+  <td class="p-2">${issue.title}</td>
+  <td class="p-2">${issue.citizen?.name || "N/A"}</td>
+  <td class="p-2">${issue.category}</td>
+
+  <td class="p-2">
+    <select onchange="updateField('${issue._id}', 'department', this.value)"
+      class="border rounded p-1">
+      <option value="">Unassigned</option>
+      <option ${issue.department === "Road Maintenance" ? "selected" : ""}>Road Maintenance</option>
+      <option ${issue.department === "Water Supply" ? "selected" : ""}>Water Supply</option>
+      <option ${issue.department === "Sanitation" ? "selected" : ""}>Sanitation</option>
+      <option ${issue.department === "Electrical" ? "selected" : ""}>Electrical</option>
+      <option ${issue.department === "Public Works" ? "selected" : ""}>Public Works</option>
+    </select>
+  </td>
+
+  <td class="p-2">
+    <select onchange="updateField('${issue._id}', 'status', this.value)"
+      class="border rounded p-1">
+      <option ${issue.status === "Pending" ? "selected" : ""}>Pending</option>
+      <option ${issue.status === "In Progress" ? "selected" : ""}>In Progress</option>
+      <option ${issue.status === "Resolved" ? "selected" : ""}>Resolved</option>
+    </select>
+  </td>
+
+  <td class="p-2">
+    <select onchange="updateField('${issue._id}', 'priority', this.value)"
+      class="border rounded p-1">
+      <option ${issue.priority === "Low" ? "selected" : ""}>Low</option>
+      <option ${issue.priority === "Normal" ? "selected" : ""}>Normal</option>
+      <option ${issue.priority === "High" ? "selected" : ""}>High</option>
+    </select>
+  </td>
+
+  <td class="p-2">
+    <input type="checkbox"
+      ${issue.verified ? "checked" : ""}
+      onchange="updateField('${issue._id}', 'verified', this.checked)">
+  </td>
+
+  <td class="p-2 text-sm text-gray-500">
+    ${new Date(issue.createdAt).toLocaleDateString()}
+  </td>
+`;
 
     table.appendChild(row);
   });
 }
 
-function updateField(id, field, value) {
-  const issues = getIssues();
-  const index = issues.findIndex(i => i.id == id);
+async function updateField(id, field, value) {
+  try {
 
-  if (index !== -1) {
-    issues[index][field] = value;
-    issues[index].updatedAt = new Date().toISOString();
-    saveIssues(issues);
+    await fetch(`${API_URL}/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        [field]: value
+      })
+    });
+
     loadDashboard();
+
+  } catch (error) {
+    console.error("Update failed:", error);
   }
 }
 
-function applyFilters() {
-  const issues = getIssues();
+async function applyFilters() {
+  const issues = await getIssues();
 
   const statusValue = document.getElementById("statusFilter").value;
   const categoryValue = document.getElementById("categoryFilter").value;
@@ -110,24 +132,23 @@ function applyFilters() {
 
   let filtered = issues;
 
-if (statusValue) {
-  filtered = filtered.filter(i =>
-    i.status?.toLowerCase().trim() === statusValue.toLowerCase().trim()
-  );
-}
+  if (statusValue) {
+    filtered = filtered.filter(i =>
+      i.status?.toLowerCase().trim() === statusValue.toLowerCase().trim()
+    );
+  }
 
-if (categoryValue) {
-  filtered = filtered.filter(i =>
-    i.category?.toLowerCase().trim() === categoryValue.toLowerCase().trim()
-  );
-}
+  if (categoryValue) {
+    filtered = filtered.filter(i =>
+      i.category?.toLowerCase().trim() === categoryValue.toLowerCase().trim()
+    );
+  }
 
-if (priorityValue) {
-  filtered = filtered.filter(i =>
-    i.priority?.toLowerCase().trim() === priorityValue.toLowerCase().trim()
-  );
-}
-
+  if (priorityValue) {
+    filtered = filtered.filter(i =>
+      i.priority?.toLowerCase().trim() === priorityValue.toLowerCase().trim()
+    );
+  }
 
   renderStats(filtered);
   renderTable(filtered);
