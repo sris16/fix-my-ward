@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Fix My Ward - Admin</title>
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-gray-100">
+
+    <div class="flex h-screen">
+
+        <!-- SIDEBAR -->
+        <div class="w-64 bg-indigo-700 text-white flex flex-col">
+
+            <div class="p-5 text-xl font-bold border-b border-indigo-500">
+                Fix My Ward
+            </div>
+
+            <nav class="flex-1 p-4 space-y-2">
+
+                <a href="dashboard.html" class="block p-2 rounded hover:bg-indigo-600">
+                    Dashboard
+                </a>
+
+                <a href="issues.html" class="block p-2 rounded bg-indigo-600">
+                    Issues
+                </a>
+
+                <a href="analytics.html" class="block p-2 rounded hover:bg-indigo-600">
+                    Analytics
+                </a>
+
+                <a href="settings.html" class="block p-2 rounded hover:bg-indigo-600">
+                    Settings
+                </a>
+
+            </nav>
+
+            <div class="p-4 border-t border-indigo-500">
+                <button onclick="logout()" class="w-full bg-red-500 p-2 rounded">
+                    Logout
+                </button>
+            </div>
+
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex-1 flex flex-col">
+
+            <!-- HEADER -->
+            <div class="bg-white shadow p-4 flex justify-between items-center">
+                <h1 class="text-xl font-semibold">Admin Dashboard</h1>
+                <span class="text-gray-600">Welcome, Admin</span>
+            </div>
+
+            <!-- CONTENT -->
+            <div class="p-6 overflow-y-auto">
+
+                <!-- SEARCH -->
+                <div class="mb-4">
+                    <input id="searchInput" placeholder="Search issues..." oninput="applySearch()"
+                        class="w-full border p-3 rounded-lg shadow-sm">
+                </div>
+
+                <!-- FILTERS -->
+                <div class="bg-white p-4 rounded shadow mb-4 grid md:grid-cols-4 gap-4">
+
+                    <select id="statusFilter" class="border p-2 rounded">
+                        <option value="">All Status</option>
+                        <option>Pending</option>
+                        <option>In Progress</option>
+                        <option>Resolved</option>
+                    </select>
+
+                    <select id="categoryFilter" class="border p-2 rounded"></select>
+
+                    <select id="priorityFilter" class="border p-2 rounded">
+                        <option value="">All Priorities</option>
+                        <option>Low</option>
+                        <option>Normal</option>
+                        <option>High</option>
+                    </select>
+
+                    <button onclick="applyFilters()" class="bg-indigo-600 text-white rounded p-2 hover:bg-indigo-700">
+                        Apply Filters
+                    </button>
+
+                </div>
+
+                <!-- TABLE -->
+                <div class="bg-white rounded shadow overflow-x-auto">
+
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3">Title</th>
+                                <th class="p-3">Citizen</th>
+                                <th class="p-3">Category</th>
+                                <th class="p-3">Department</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Priority</th>
+                                <th class="p-3">Verified</th>
+                                <th class="p-3">Date</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="issuesTable"></tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL (keep same as before) -->
+    <div id="issueModal" class="hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50">
+
+        <div class="bg-white w-full max-w-4xl rounded-xl p-6 shadow-xl overflow-y-auto max-h-[90vh]">
+            <div id="modalContent"></div>
+        </div>
+
+    </div>
+
+    <script src="../assets/js/admin.js"></script>
+
+    </class=>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden fixed top-5 right-5 bg-gray-800 text-white px-4 py-2 rounded shadow-lg z-50">
+    </div>
+
+    <!-- LOADER -->
+    <div id="loader" class="hidden fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div class="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+    </div>
+</body>
+
+</html>
