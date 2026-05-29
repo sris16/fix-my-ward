@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import { EyeIcon, EyeOffIcon } from "../components/SvgIcon";
 
 function Register() {
   const [form, setForm] = useState({
@@ -10,6 +11,7 @@ function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
@@ -31,14 +33,12 @@ function Register() {
     setError("");
 
     try {
-      const { data } = await axios.post("http://localhost:5000/api/auth/register", form);
+      await axios.post("http://localhost:5000/api/auth/register", form);
       
-      // Store token securely in persistent storage
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.role || "citizen");
+      alert("Registration successful! Please login with your credentials.");
       
-      // Automatically navigate to dashboard
-      navigate("/dashboard");
+      // Navigate strictly to login as per capstone requirements
+      navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed");
     } finally {
@@ -47,69 +47,89 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 relative overflow-hidden px-4">
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-emerald-500 rounded-full mix-blend-multiply filter blur-[100px] opacity-10"></div>
+    <div 
+      className="min-h-screen flex items-center justify-center bg-gray-950 relative overflow-hidden px-4"
+      style={{
+        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0)",
+        backgroundSize: "24px 24px"
+      }}
+    >
+      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-emerald-500 rounded-full mix-blend-screen filter blur-[100px] opacity-5 pointer-events-none"></div>
       
-      <div className="bg-gray-900 border border-gray-800 p-8 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md z-10">
+      <div className="bg-gray-900/60 backdrop-blur-md border border-gray-800/80 p-8 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md z-10">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white tracking-tight">Create Account</h2>
+          <h2 className="text-3xl font-black text-white tracking-tight">Create Account</h2>
           <p className="text-gray-400 mt-2 text-sm">Join Fix My Ward to report issues</p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-lg mb-6 text-sm text-center">
+          <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm text-center font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Full Name</label>
+            <label className="block text-sm font-semibold text-gray-400 mb-1.5">Full Name</label>
             <input
               type="text"
               name="name"
               placeholder="John Doe"
               value={form.name}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Email Address</label>
+            <label className="block text-sm font-semibold text-gray-400 mb-1.5">Email Address</label>
             <input
               type="email"
               name="email"
               placeholder="john@example.com"
               value={form.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={form.password}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-lg bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
-              required
-              minLength="6"
-            />
+            <label className="block text-sm font-semibold text-gray-400 mb-1.5">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="••••••••"
+                value={form.password}
+                onChange={handleChange}
+                className="w-full pl-4 pr-10 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                required
+                minLength="6"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-lg font-bold text-white transition-all transform hover:-translate-y-0.5 mt-4 ${
+            className={`w-full py-3.5 rounded-xl font-bold text-gray-950 transition-all transform hover:-translate-y-0.5 mt-6 ${
               loading 
-                ? "bg-emerald-600/50 cursor-not-allowed" 
-                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_4px_14px_0_rgba(16,185,129,0.39)]"
+                ? "bg-emerald-500/50 cursor-not-allowed" 
+                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_35px_rgba(16,185,129,0.45)]"
             }`}
           >
             {loading ? "Registering..." : "Sign Up"}
@@ -118,7 +138,7 @@ function Register() {
 
         <p className="text-center text-gray-500 text-sm mt-6">
           Already have an account?{" "}
-          <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline">
+          <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold hover:underline">
             Log in
           </Link>
         </p>

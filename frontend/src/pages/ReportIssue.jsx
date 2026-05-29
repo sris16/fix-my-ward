@@ -2,6 +2,15 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import { 
+  ArrowLeftIcon, 
+  LocationIcon, 
+  GpsIcon, 
+  CloseIcon, 
+  TrashIcon, 
+  UpvoteIcon 
+} from "../components/SvgIcon";
+import { Spinner, FullPageSpinner } from "../components/LoadingSkeleton";
 
 // Helper: Haversine distance in km
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -55,6 +64,7 @@ function ReportIssue() {
   const [photos, setPhotos] = useState([]); // Base64 strings
   
   const [loading, setLoading] = useState(false);
+  const [isGpsLoading, setIsGpsLoading] = useState(false);
   const [isFullscreenMap, setIsFullscreenMap] = useState(false);
   const [duplicateSuggestions, setDuplicateSuggestions] = useState(null);
 
@@ -105,9 +115,16 @@ function ReportIssue() {
       alert("Geolocation is not supported by your browser");
       return;
     }
+    setIsGpsLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-      () => alert("Unable to fetch location. Please ensure location permissions are granted."),
+      (pos) => {
+        setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+        setIsGpsLoading(false);
+      },
+      () => {
+        alert("Unable to fetch location. Please ensure location permissions are granted.");
+        setIsGpsLoading(false);
+      },
       { enableHighAccuracy: true, maximumAge: 0 }
     );
   };
@@ -157,7 +174,6 @@ function ReportIssue() {
         lng: Number(coords.longitude),
         photos: photos,
         forceSubmit,
-        // citizen block is handled by JWT auth token in backend
       };
 
       await axios.post("http://localhost:5000/api/issues", payload, {
@@ -203,50 +219,68 @@ function ReportIssue() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white pb-12">
-      <header className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-20 shadow-md">
+    <div 
+      className="min-h-screen bg-gray-950 text-white pb-12"
+      style={{
+        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0)",
+        backgroundSize: "24px 24px"
+      }}
+    >
+      {loading && <FullPageSpinner message="Submitting report and checking nearby suggestions..." />}
+
+      <header className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 p-4 sticky top-0 z-20 shadow-md">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
-          <Link to="/dashboard" className="text-gray-400 hover:text-white transition">← Back</Link>
-          <h1 className="text-xl font-bold">Report an Issue</h1>
+          <Link 
+            to="/dashboard" 
+            className="flex items-center text-gray-400 hover:text-white transition font-semibold text-sm"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-1.5" />
+            Back
+          </Link>
+          <span className="text-gray-600 font-light">|</span>
+          <h1 className="text-lg font-black tracking-tight">Report an Issue</h1>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto mt-8 px-4 relative z-10">
-        <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl space-y-8">
+        <form onSubmit={handleSubmit} className="bg-gray-900/60 backdrop-blur-md border border-gray-800/80 rounded-2xl p-6 shadow-xl space-y-8">
           
           {/* 1. ISSUE DETAILS */}
           <section>
-            <h2 className="text-lg font-bold text-emerald-400 border-b border-gray-800 pb-2 mb-4">1. Issue Details</h2>
+            <h2 className="text-sm font-bold tracking-wider text-emerald-400 uppercase flex items-center gap-2 border-b border-gray-800/85 pb-2 mb-4">
+              <span className="w-1.5 h-3 bg-emerald-500 rounded-full inline-block"></span>
+              1. Issue Details
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Category (Read-Only)</label>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Category (Read-Only)</label>
                 <input
                   type="text"
                   value={form.category}
                   readOnly
-                  className="w-full p-3 rounded-lg bg-gray-950/50 border border-gray-800 text-gray-400 cursor-not-allowed outline-none"
+                  className="w-full p-3 rounded-xl bg-gray-950/50 border border-gray-800/80 text-gray-500 cursor-not-allowed outline-none font-semibold text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Title *</label>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Title *</label>
                 <input
                   name="title"
                   placeholder={getPlaceholder()}
                   value={form.title}
                   onChange={handleChange}
-                  className="w-full p-3 rounded-lg bg-gray-950 border border-gray-800 text-white focus:border-emerald-500 outline-none"
+                  className="w-full p-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-medium text-sm"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Description *</label>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Description *</label>
                 <textarea
                   name="description"
                   placeholder="Describe the issue clearly"
                   value={form.description}
                   onChange={handleChange}
                   rows="3"
-                  className="w-full p-3 rounded-lg bg-gray-950 border border-gray-800 text-white focus:border-emerald-500 outline-none resize-none"
+                  className="w-full p-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-medium text-sm resize-none"
                   required
                 />
               </div>
@@ -255,44 +289,61 @@ function ReportIssue() {
 
           {/* 2. LOCATION SECTION */}
           <section>
-            <h2 className="text-lg font-bold text-emerald-400 border-b border-gray-800 pb-2 mb-4 flex justify-between items-center">
-              <span>2. Location *</span>
-              <button type="button" onClick={handleUseMyLocation} className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3 py-1.5 rounded-full font-medium">
-                📍 Use GPS
+            <h2 className="text-sm font-bold tracking-wider text-emerald-400 uppercase flex justify-between items-center border-b border-gray-800/85 pb-2 mb-4">
+              <span className="flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-emerald-500 rounded-full inline-block"></span>
+                2. Location *
+              </span>
+              <button 
+                type="button" 
+                onClick={handleUseMyLocation} 
+                className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-3.5 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition border border-emerald-500/10 hover:border-emerald-500/20"
+              >
+                {isGpsLoading ? (
+                  <Spinner className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <GpsIcon className="w-3.5 h-3.5" />
+                )}
+                {isGpsLoading ? "Locating..." : "Use GPS"}
               </button>
             </h2>
+            
             <div className="space-y-4">
-              <div className="h-64 border border-gray-800 rounded-lg relative overflow-hidden group z-0">
+              <div className="h-64 border border-gray-800/85 rounded-xl relative overflow-hidden group z-0">
                 <MapContainer center={coords.latitude ? [coords.latitude, coords.longitude] : [11.0168, 76.9558]} zoom={13} className="h-full w-full z-0">
                   <TileLayer attribution="© OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <LocationMarker setCoords={setCoords} />
                   <RecenterMap coords={coords} />
                   {coords.latitude && <Marker position={[coords.latitude, coords.longitude]} />}
                 </MapContainer>
-                <button type="button" onClick={() => setIsFullscreenMap(true)} className="absolute bottom-4 right-4 bg-gray-900/90 hover:bg-gray-800 px-4 py-2 rounded-lg font-bold text-sm shadow-xl z-[400] opacity-80 group-hover:opacity-100 transition">
-                  ⤢ Fullscreen Map
+                <button 
+                  type="button" 
+                  onClick={() => setIsFullscreenMap(true)} 
+                  className="absolute bottom-4 right-4 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-4 py-2 rounded-xl font-bold text-sm shadow-xl z-[400] opacity-80 group-hover:opacity-100 transition duration-300"
+                >
+                  Fullscreen Map
                 </button>
               </div>
               
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Latitude</label>
-                  <input readOnly value={coords.latitude} className="w-full p-2 rounded bg-gray-950/50 border border-gray-800 text-gray-400 text-sm cursor-not-allowed" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Latitude</label>
+                  <input readOnly value={coords.latitude} className="w-full p-2.5 rounded-lg bg-gray-950/50 border border-gray-800 text-gray-500 text-xs cursor-not-allowed font-mono" />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Longitude</label>
-                  <input readOnly value={coords.longitude} className="w-full p-2 rounded bg-gray-950/50 border border-gray-800 text-gray-400 text-sm cursor-not-allowed" />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Longitude</label>
+                  <input readOnly value={coords.longitude} className="w-full p-2.5 rounded-lg bg-gray-950/50 border border-gray-800 text-gray-500 text-xs cursor-not-allowed font-mono" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-400 mb-1">Location Text (Optional)</label>
+                <label className="block text-xs font-semibold text-gray-400 mb-1.5">Location Text (Optional)</label>
                 <input
                   name="locationText"
                   placeholder="e.g. Near Sai Baba Colony signal"
                   value={form.locationText}
                   onChange={handleChange}
-                  className="w-full p-3 rounded-lg bg-gray-950 border border-gray-800 text-white focus:border-emerald-500 outline-none"
+                  className="w-full p-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-medium text-sm"
                 />
               </div>
             </div>
@@ -300,11 +351,14 @@ function ReportIssue() {
 
           {/* 3. PHOTO UPLOAD */}
           <section>
-            <h2 className="text-lg font-bold text-emerald-400 border-b border-gray-800 pb-2 mb-4">3. Visual Evidence</h2>
+            <h2 className="text-sm font-bold tracking-wider text-emerald-400 uppercase flex items-center gap-2 border-b border-gray-800/85 pb-2 mb-4">
+              <span className="w-1.5 h-3 bg-emerald-500 rounded-full inline-block"></span>
+              3. Visual Evidence
+            </h2>
             
             <div className="mb-4">
-              <label className="block w-full border-2 border-dashed border-gray-700 hover:border-emerald-500 hover:bg-gray-900/50 rounded-xl p-6 text-center cursor-pointer transition">
-                <span className="text-gray-400 text-sm block mb-1">Click to upload photos (Max 4)</span>
+              <label className="block w-full border-2 border-dashed border-gray-800 hover:border-emerald-500/50 hover:bg-gray-900/30 rounded-2xl p-6 text-center cursor-pointer transition duration-300">
+                <span className="text-gray-400 font-semibold text-sm block mb-1">Click to upload photos (Max 4)</span>
                 <span className="text-xs text-gray-500">Supports JPG, PNG</span>
                 <input type="file" multiple accept="image/*" className="hidden" onChange={handlePhotoUpload} />
               </label>
@@ -313,16 +367,31 @@ function ReportIssue() {
             {photos.length > 0 && (
               <div className="grid grid-cols-4 gap-3">
                 {photos.map((src, idx) => (
-                  <div key={idx} className="relative aspect-square rounded-lg border border-gray-800 overflow-hidden group">
+                  <div key={idx} className="relative aspect-square rounded-xl border border-gray-800/80 overflow-hidden group">
                     <img src={src} alt="Preview" className="object-cover w-full h-full" />
-                    <button type="button" onClick={() => removePhoto(idx)} className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold opacity-0 group-hover:opacity-100 transition shadow-lg">✕</button>
+                    <button 
+                      type="button" 
+                      onClick={() => removePhoto(idx)} 
+                      className="absolute top-1.5 right-1.5 bg-red-500/90 hover:bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition duration-200"
+                      title="Remove image"
+                    >
+                      <CloseIcon className="w-3.5 h-3.5 text-white" />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          <button type="submit" disabled={loading} className="w-full py-4 rounded-xl font-bold text-white transition-all transform hover:-translate-y-0.5 bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className={`w-full py-4 rounded-xl font-bold text-gray-950 transition-all transform hover:-translate-y-0.5 ${
+              loading
+                ? "bg-emerald-500/50 cursor-not-allowed"
+                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]"
+            }`}
+          >
             {loading ? "Processing..." : "Submit Report"}
           </button>
         </form>
@@ -331,9 +400,14 @@ function ReportIssue() {
       {/* Fullscreen Map Modal */}
       {isFullscreenMap && (
         <div className="fixed inset-0 z-[1000] bg-black flex flex-col">
-          <div className="bg-gray-900 p-4 flex justify-between items-center shadow-md z-10 shrink-0">
-            <h3 className="font-bold">Select Location</h3>
-            <button onClick={() => setIsFullscreenMap(false)} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-bold text-sm">Close map</button>
+          <div className="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center shadow-md z-10 shrink-0">
+            <h3 className="font-bold">Select Location (Click Map)</h3>
+            <button 
+              onClick={() => setIsFullscreenMap(false)} 
+              className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-xl font-bold text-sm border border-gray-700 transition"
+            >
+              Close map
+            </button>
           </div>
           <div className="flex-grow relative z-0">
             <MapContainer center={coords.latitude ? [coords.latitude, coords.longitude] : [11.0168, 76.9558]} zoom={13} className="h-full w-full z-0">
@@ -348,31 +422,50 @@ function ReportIssue() {
 
       {/* Duplicate Detection Modal */}
       {duplicateSuggestions && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-fadeIn">
-            <div className="w-12 h-12 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center text-2xl mb-4 mx-auto">⚠️</div>
-            <h2 className="text-2xl font-bold text-center mb-2">Similar issue detected nearby!</h2>
-            <p className="text-gray-400 text-center text-sm mb-6">
-              There is an existing issue within 300 meters matching your category.
+            <div className="w-12 h-12 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full flex items-center justify-center text-2xl mb-4 mx-auto">
+              ⚠️
+            </div>
+            <h2 className="text-2xl font-black text-center mb-2 tracking-tight">Similar Issue Detected!</h2>
+            <p className="text-gray-400 text-center text-sm mb-6 leading-relaxed">
+              There is an existing issue reported within 300 meters matching your category. Upvoting is recommended to avoid duplicates.
             </p>
 
-            <div className="bg-gray-950 border border-gray-800 rounded-xl p-4 mb-6">
-              <h3 className="font-semibold text-emerald-400">{duplicateSuggestions[0].title}</h3>
-              <p className="text-sm text-gray-400 mt-1 line-clamp-2">{duplicateSuggestions[0].description}</p>
+            <div className="bg-gray-950/80 border border-gray-800 rounded-xl p-4 mb-6">
+              <h3 className="font-bold text-emerald-400 text-base">{duplicateSuggestions[0].title}</h3>
+              <p className="text-sm text-gray-400 mt-1.5 leading-relaxed line-clamp-2">{duplicateSuggestions[0].description}</p>
             </div>
 
             <div className="flex flex-col gap-3">
-              <button disabled={loading} onClick={() => handleUpvoteExisting(duplicateSuggestions[0]._id)} className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-bold transition-colors">
-                👍 Upvote Existing Issue
+              <button 
+                disabled={loading} 
+                onClick={() => handleUpvoteExisting(duplicateSuggestions[0]._id)} 
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 rounded-xl font-bold text-gray-950 transition-colors flex items-center justify-center gap-2"
+              >
+                <UpvoteIcon className="w-4 h-4 text-gray-950" />
+                Upvote Existing Issue
               </button>
               
-              <div className="relative flex py-2 items-center"><div className="flex-grow border-t border-gray-800"></div></div>
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-gray-800"></div>
+                <span className="mx-3 text-[10px] text-gray-600 font-bold uppercase tracking-wider">or</span>
+                <div className="flex-grow border-t border-gray-800"></div>
+              </div>
 
-              <button disabled={loading} onClick={() => executeSubmit(true)} className="w-full py-3 bg-transparent border border-gray-700 hover:bg-gray-800 text-gray-300 rounded-xl font-medium transition-colors">
-                🚀 This is a different issue, Submit New
+              <button 
+                disabled={loading} 
+                onClick={() => executeSubmit(true)} 
+                className="w-full py-3 bg-transparent border border-gray-800 hover:bg-gray-800 hover:border-gray-700 text-gray-300 rounded-xl font-bold transition-all"
+              >
+                This is a different issue, Submit New
               </button>
               
-              <button disabled={loading} onClick={() => setDuplicateSuggestions(null)} className="w-full py-2 text-gray-500 hover:text-white text-sm transition-colors mt-2">
+              <button 
+                disabled={loading} 
+                onClick={() => setDuplicateSuggestions(null)} 
+                className="w-full py-2 text-gray-500 hover:text-white text-sm font-semibold transition-colors mt-2"
+              >
                 Cancel
               </button>
             </div>

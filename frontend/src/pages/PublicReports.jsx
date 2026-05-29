@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { 
+  ArrowLeftIcon, 
+  LocationIcon, 
+  PublicIcon, 
+  UpvoteIcon 
+} from "../components/SvgIcon";
+import { CardSkeleton, Spinner } from "../components/LoadingSkeleton";
 
 // Helper function to calculate distance in km (Haversine)
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -88,42 +95,49 @@ function PublicReports() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "Resolved": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/50";
-      case "In Progress": return "bg-blue-500/20 text-blue-400 border-blue-500/50";
-      default: return "bg-orange-500/20 text-orange-400 border-orange-500/50";
+      case "Resolved": return "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+      case "In Progress": return "bg-blue-500/10 text-blue-400 border-blue-500/25";
+      default: return "bg-orange-500/10 text-orange-400 border-orange-500/25";
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white pb-12 relative overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 pointer-events-none"></div>
+      <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-teal-500/5 rounded-full mix-blend-multiply filter blur-[128px] pointer-events-none"></div>
 
-      <header className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-20 shadow-md">
+      <header className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 p-4 sticky top-0 z-20 shadow-md">
         <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <Link to="/dashboard" className="text-gray-400 hover:text-white transition">
-            ← Back
+          <Link 
+            to="/dashboard" 
+            className="flex items-center text-gray-400 hover:text-white transition font-semibold text-sm"
+          >
+            <ArrowLeftIcon className="w-4 h-4 mr-1.5" />
+            Back
           </Link>
-          <h1 className="text-xl font-bold">Public Reports Near You</h1>
+          <span className="text-gray-600 font-light">|</span>
+          <h1 className="text-lg font-black tracking-tight">Public Reports</h1>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto mt-8 px-4 relative z-10">
         {loading || locationStatus ? (
-          <div className="text-center py-20">
-            <div className="text-4xl mb-4 animate-bounce">🌍</div>
-            <p className="text-gray-400">{locationStatus || "Loading nearby reports..."}</p>
+          <div className="text-center py-20 bg-gray-900/40 border border-gray-800/80 rounded-2xl p-10 flex flex-col items-center justify-center">
+            <Spinner className="w-10 h-10 text-teal-400 mb-4" />
+            <p className="text-gray-400 text-sm font-medium tracking-wide">{locationStatus || "Fetching public reports near your coordinates..."}</p>
           </div>
         ) : issues.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-10 text-center shadow-lg">
-             <div className="text-6xl mb-4">🌟</div>
-             <h2 className="text-2xl font-bold mb-2">All Good Here!</h2>
-             <p className="text-gray-400 mb-6">There are no reported civic issues within 10km of your location.</p>
+          <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-2xl p-10 text-center shadow-lg">
+             <div className="w-16 h-16 bg-teal-500/10 text-teal-400 rounded-full flex items-center justify-center mb-6 mx-auto">
+               <PublicIcon className="w-8 h-8" />
+             </div>
+             <h2 className="text-2xl font-bold tracking-tight text-white mb-2">All Clear Nearby!</h2>
+             <p className="text-gray-400 text-sm leading-relaxed font-light max-w-sm mx-auto">There are currently no reported civic issues within a 10km radius of your location.</p>
           </div>
         ) : (
           <div className="grid gap-6">
-            <p className="text-gray-400 text-sm mb-2 font-medium tracking-wide uppercase">
-              Showing {issues.length} issues within 10km
+            <p className="text-gray-500 text-xs font-bold tracking-wider uppercase mb-2">
+              Showing {issues.length} issues within 10km radius
             </p>
             {issues.map((issue) => {
               // Calculate distance for UI display
@@ -135,49 +149,51 @@ function PublicReports() {
                 : "?";
 
               return (
-                <div key={issue._id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-lg transition hover:border-teal-500/30 group">
+                <div key={issue._id} className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-2xl p-6 shadow-lg transition duration-300 hover:border-teal-500/20 group">
                   <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h2 className="text-xl font-bold text-white mb-1 group-hover:text-teal-400 transition">{issue.title}</h2>
-                      <div className="flex items-center gap-2 text-xs font-medium">
-                        <span className="bg-gray-800 text-gray-300 px-2 py-1 rounded">
+                      <h2 className="text-xl font-bold text-white tracking-tight mb-1.5 group-hover:text-teal-400 transition duration-200">{issue.title}</h2>
+                      <div className="flex items-center gap-2.5 text-xs font-semibold">
+                        <span className="bg-gray-800 text-gray-300 px-2.5 py-1 rounded-lg">
                           {issue.category}
                         </span>
-                        <span className="text-teal-500 bg-teal-500/10 px-2 py-1 rounded font-bold">
+                        <span className="text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-lg border border-teal-500/10">
                           {dist} km away
                         </span>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 border rounded-full text-xs font-bold ${getStatusColor(issue.status)}`}>
+                    <div className={`px-3.5 py-1.5 border rounded-full text-xs font-bold ${getStatusColor(issue.status)}`}>
                       {issue.status}
                     </div>
                   </div>
 
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-3">
+                  <p className="text-gray-400 text-sm mb-4 leading-relaxed font-light line-clamp-3">
                     {issue.description}
                   </p>
 
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-gray-500 text-xs">Reported by:</span>
-                    <span className="text-gray-300 text-sm font-medium">{issue.reportedBy?.name || "A Citizen"}</span>
+                  <div className="flex items-center gap-1.5 mb-4 text-xs font-medium text-gray-500">
+                    <span>Reported by:</span>
+                    <span className="text-gray-300 font-bold">{issue.reportedBy?.name || "A Citizen"}</span>
                   </div>
 
                   {issue.locationText && (
-                    <p className="text-sm text-gray-500 flex items-center gap-1 mb-4">
-                      📍 {issue.locationText}
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5 mb-4 font-medium">
+                      <LocationIcon className="w-3.5 h-3.5 text-gray-500" />
+                      {issue.locationText}
                     </p>
                   )}
 
-                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-800">
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-800/60">
                      <button
                        onClick={() => handleUpvote(issue._id)}
-                       className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-xl transition shadow-sm font-bold text-sm"
+                       className="flex items-center gap-2 bg-gray-800 hover:bg-emerald-500 hover:text-gray-950 text-white px-4 py-2 rounded-xl transition duration-200 font-bold text-xs"
                      >
-                       👍 Upvote <span className="bg-gray-900 text-yellow-500 px-2 py-0.5 rounded-lg ml-1">{issue.upvotes?.length || 0}</span>
+                       <UpvoteIcon className="w-3.5 h-3.5 text-current" />
+                       <span>Upvote Issue ({issue.upvotes?.length || 0})</span>
                      </button>
 
-                     <div className="flex items-center gap-2 text-sm text-gray-400">
-                       Priority: <span className="text-white">{issue.priority}</span>
+                     <div className="flex items-center gap-1.5 text-xs text-gray-400 font-bold uppercase tracking-wider">
+                       Priority: <span className="text-white text-sm font-semibold tracking-normal normal-case">{issue.priority}</span>
                      </div>
                   </div>
                 </div>
