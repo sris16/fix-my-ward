@@ -140,3 +140,10 @@ export const TrashIcon = (props) => (
     <line x1="14" y1="11" x2="14" y2="17" />
   </SvgWrapper>
 );
+
+export const ArrowRightIcon = (props) => (
+  <SvgWrapper viewBox="0 0 24 24" {...props}>
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </SvgWrapper>
+);

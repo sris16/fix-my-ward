@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import { EyeIcon, EyeOffIcon } from "../components/SvgIcon";
+import { EyeIcon, EyeOffIcon, PublicIcon } from "../components/SvgIcon";
+import { Spinner } from "../components/LoadingSkeleton";
 
 function Login() {
   const [form, setForm] = useState({
@@ -40,12 +41,14 @@ function Login() {
       // 💾 Store token and role
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.role);
+      localStorage.setItem("name", data.name || "");
+      localStorage.setItem("email", data.email || "");
 
       // 🔁 Redirect
       navigate("/dashboard");
 
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError(err.response?.data?.message || "Login failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -59,36 +62,44 @@ function Login() {
         backgroundSize: "24px 24px"
       }}
     >
-      <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-emerald-500 rounded-full mix-blend-screen filter blur-[100px] opacity-5 pointer-events-none"></div>
+      {/* Visual background glows */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-emerald-500/5 rounded-full mix-blend-screen filter blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-500/5 rounded-full mix-blend-screen filter blur-[128px] pointer-events-none"></div>
       
-      <div className="bg-gray-900/60 backdrop-blur-md border border-gray-800/80 p-8 sm:p-10 rounded-2xl shadow-2xl w-full max-w-md z-10">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-black text-white tracking-tight">Welcome Back</h2>
-          <p className="text-gray-400 mt-2 text-sm">Log in to track your civic reports</p>
+      <div className="bg-gray-900/60 backdrop-blur-md border border-gray-800/80 p-8 sm:p-10 rounded-3xl shadow-2xl w-full max-w-md z-10 transition duration-300">
+        
+        {/* Branding Badge */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-3.5 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+            <PublicIcon className="w-7 h-7 text-emerald-400" />
+          </div>
+          <span className="text-[10px] uppercase font-black tracking-[0.2em] text-emerald-400">Fix My Ward</span>
+          <h2 className="text-2xl font-black text-white tracking-tight mt-2">Welcome Back</h2>
+          <p className="text-gray-400 mt-1 text-xs">Log in to track your civic reports</p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm text-center font-medium">
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl mb-6 text-xs text-center font-semibold">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-400 mb-1.5">Email Address</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Email Address</label>
             <input
               type="email"
               name="email"
               placeholder="john@example.com"
               value={form.email}
               onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium text-sm"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-400 mb-1.5">Password</label>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -96,7 +107,7 @@ function Login() {
                 placeholder="••••••••"
                 value={form.password}
                 onChange={handleChange}
-                className="w-full pl-4 pr-10 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                className="w-full pl-4 pr-10 py-3 rounded-xl bg-gray-950 border border-gray-800 text-white placeholder-gray-700 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-medium text-sm"
                 required
               />
               <button
@@ -117,19 +128,20 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3.5 rounded-xl font-bold text-gray-950 transition-all transform hover:-translate-y-0.5 mt-6 ${
+            className={`w-full py-4 rounded-xl font-bold text-gray-950 transition-all transform hover:-translate-y-0.5 mt-6 flex items-center justify-center gap-2 ${
               loading 
                 ? "bg-emerald-500/50 cursor-not-allowed" 
-                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_35px_rgba(16,185,129,0.45)]"
+                : "bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.4)]"
             }`}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading && <Spinner className="w-4 h-4 text-gray-950" />}
+            {loading ? "Verifying Credentials..." : "Access Account"}
           </button>
         </form>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
+        <p className="text-center text-gray-500 text-xs mt-8">
           Don't have an account?{" "}
-          <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-semibold hover:underline">
+          <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-extrabold hover:underline transition">
             Sign up
           </Link>
         </p>

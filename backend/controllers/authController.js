@@ -51,3 +51,12 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// @desc Get logged-in user profile
+export const getMe = async (req, res) => {
+  try {
+    res.json(req.user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

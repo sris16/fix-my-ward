@@ -1,4 +1,7 @@
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import {
   RoadIcon,
   WaterIcon,
@@ -8,131 +11,821 @@ import {
   HeatmapIcon,
   BellIcon,
   LogoutIcon,
+  LocationIcon,
+  ProfileIcon,
+  ArrowRightIcon,
+  UpvoteIcon,
 } from "../components/SvgIcon";
+import { Spinner } from "../components/LoadingSkeleton";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+
+  const [loading, setLoading] = useState(true);
+  const [issues, setIssues] = useState([]);
+  const [myIssues, setMyIssues] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState("map"); // "map" | "heatmap"
+  const [greeting, setGreeting] = useState("Welcome");
+  
+  // User Profile extracted from database or token payload
+  const [profile, setProfile] = useState({
+    name: localStorage.getItem("name") || "Citizen",
+    email: localStorage.getItem("email") || "citizen@fixmyward.in",
+    id: "FMW-827391",
+    joined: "May 2026",
+    location: "Coimbatore Central",
+    role: localStorage.getItem("role") || "citizen"
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("name");
+    localStorage.removeItem("email");
     navigate("/login");
   };
 
+  useEffect(() => {
+    // ⏰ Dynamic time of day greeting
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good Morning");
+    else if (hour < 17) setGreeting("Good Afternoon");
+    else setGreeting("Good Evening");
+
+    // Close notification dropdown when clicking outside
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const headers = { Authorization: `Bearer ${token}` };
+
+        // Fetch current user details from /api/auth/me securely
+        let userDetails = { 
+          name: localStorage.getItem("name") || "Citizen", 
+          email: localStorage.getItem("email") || "citizen@fixmyward.in",
+          role: localStorage.getItem("role") || "citizen"
+        };
+        
+        try {
+          const { data: me } = await axios.get("http://localhost:5000/api/auth/me", { headers });
+          if (me) {
+            userDetails = me;
+            localStorage.setItem("name", me.name || "");
+            localStorage.setItem("email", me.email || "");
+            localStorage.setItem("role", me.role || "");
+          }
+        } catch (meError) {
+          console.error("Error fetching current user profile from /me:", meError);
+        }
+
+        // Fetch all issues
+        const { data: allIssues } = await axios.get("http://localhost:5000/api/issues");
+        setIssues(allIssues);
+
+        // Fetch user's issues
+        const { data: userIssues } = await axios.get("http://localhost:5000/api/issues/my", { headers });
+        setMyIssues(userIssues);
+
+        // Fetch notifications
+        const { data: notifs } = await axios.get("http://localhost:5000/api/notifications", { headers });
+        setNotifications(notifs);
+
+        setProfile({
+          name: userDetails.name || "Citizen",
+          email: userDetails.email || "citizen@fixmyward.in",
+          id: userDetails._id ? `FMW-${userDetails._id.slice(-6).toUpperCase()}` : "FMW-827391",
+          joined: userDetails.createdAt ? new Date(userDetails.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : "May 2026",
+          location: "Coimbatore Central",
+          role: userDetails.role || "citizen"
+        });
+
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+    } catch (e) {
+      console.error("Error marking notification as read:", e);
+    }
+  };
+
+  // Metric Calculation & Gamification
+  const totalReported = myIssues.length;
+  const pendingCount = myIssues.filter(i => i.status !== "Resolved").length;
+  const resolvedCount = myIssues.filter(i => i.status === "Resolved").length;
+  const totalCommunityVotes = myIssues.reduce((acc, issue) => acc + (issue.upvotes?.length || 0), 0);
+  
+  // High-fidelity SaaS Impact Score: (Resolved * 25) + (Submitted * 10) + (Upvotes * 5)
+  const impactScore = (resolvedCount * 25) + (totalReported * 10) + (totalCommunityVotes * 5);
+  
+  // Tier Levels: Each 50 points yields a Level
+  const currentLevel = Math.floor(impactScore / 50) + 1;
+  const currentLevelFloor = (currentLevel - 1) * 50;
+  const nextLevelFloor = currentLevel * 50;
+  const levelProgress = Math.min(((impactScore - currentLevelFloor) / 50) * 100, 100);
+
+  // Badge Status Calculation
+  const badges = [
+    { id: "active", title: "Active Citizen", desc: "Reported 1+ civic issues", earned: totalReported >= 1, color: "from-emerald-400 to-teal-500" },
+    { id: "first", title: "First Sentinel", desc: "Your initial community submission", earned: totalReported >= 1, color: "from-blue-400 to-indigo-500" },
+    { id: "supporter", title: "Community Supporter", desc: "Earned 1+ verification votes", earned: totalCommunityVotes >= 1, color: "from-amber-400 to-orange-500" },
+    { id: "reporter", title: "Top Sentinel", desc: "Reported 5+ community issues", earned: totalReported >= 5, color: "from-purple-500 to-pink-500" }
+  ];
+
+  // Issue Counts by Category for the premium analytics SVG chart
+  const roadCount = issues.filter(i => i.category === "Road").length;
+  const waterCount = issues.filter(i => i.category === "Water").length;
+  const surroundingsCount = issues.filter(i => i.category === "Surroundings").length;
+  const maxCategoryCount = Math.max(roadCount, waterCount, surroundingsCount, 1);
+
+  // Calculate percentage of category charts
+  const roadPercent = (roadCount / maxCategoryCount) * 100;
+  const waterPercent = (waterCount / maxCategoryCount) * 100;
+  const surroundingsPercent = (surroundingsCount / maxCategoryCount) * 100;
+
+  // Notification states
+  const unreadNotifications = notifications.filter(n => !n.read).length;
+
   return (
     <div 
-      className="min-h-screen bg-gray-950 text-white p-6 relative overflow-hidden"
+      className="min-h-screen bg-gray-950 text-white pb-16 relative overflow-hidden"
       style={{
-        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0)",
+        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0)",
         backgroundSize: "24px 24px"
       }}
     >
-      {/* Background Gradients */}
-      <div className="absolute top-0 left-0 w-full h-96 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
-      
-      <div className="max-w-4xl mx-auto relative z-10">
-        <header className="flex justify-between items-center mb-10 mt-6 border-b border-gray-900 pb-6">
-          <div>
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-              Citizen Portal
-            </h1>
-            <p className="text-gray-400 mt-1 text-sm font-medium">Empowering your voice in community decisions</p>
+      {/* Background radial glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-500/5 rounded-full mix-blend-screen filter blur-[150px] pointer-events-none"></div>
+      <div className="absolute bottom-[20%] right-[-10%] w-[600px] h-[600px] bg-teal-500/5 rounded-full mix-blend-screen filter blur-[180px] pointer-events-none"></div>
+
+      {/* Modern SaaS Topbar Navigation */}
+      <nav className="bg-gray-900/40 backdrop-blur-md border-b border-gray-800/80 sticky top-0 z-30 shadow-md">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              <PublicIcon className="w-5 h-5 text-emerald-400" />
+            </div>
+            <span className="text-sm font-black tracking-[0.2em] text-white">FIXMYWARD</span>
+            <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-bold ml-2">CITIZEN</span>
           </div>
-          
-          <div className="flex items-center gap-3">
+
+          <div className="flex items-center gap-4 relative" ref={dropdownRef}>
+            
+            {/* Notification Bell Dropdown Button */}
             <button 
-              onClick={() => navigate("/notifications")}
-              className="p-3 bg-gray-900/60 backdrop-blur-md border border-gray-800 rounded-xl hover:bg-gray-800 hover:border-gray-700 transition shadow-lg text-gray-400 hover:text-white"
-              title="Notifications"
+              onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+              className="p-2.5 bg-gray-900/60 hover:bg-gray-800/80 border border-gray-800 rounded-xl transition text-gray-400 hover:text-white relative"
+              title="Toggle notifications dropdown"
             >
-              <BellIcon className="w-5 h-5" />
+              <BellIcon className="w-4 h-4" />
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-gray-950 text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">
+                  {unreadNotifications}
+                </span>
+              )}
             </button>
+
+            {/* Premium Interactive Notification Dropdown */}
+            {showNotifDropdown && (
+              <div className="absolute right-0 top-14 w-80 bg-gray-900/95 backdrop-blur-md border border-gray-800 rounded-2xl shadow-2xl z-40 p-4 text-left overflow-hidden">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Recent Alerts</h4>
+                  <span className="text-[10px] bg-emerald-500/15 text-emerald-400 px-2 py-0.5 rounded-full font-bold">
+                    {unreadNotifications} new
+                  </span>
+                </div>
+                
+                <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 italic py-4 text-center">No alerts logged in your ward.</p>
+                  ) : (
+                    notifications.slice(0, 4).map((notif) => (
+                      <div 
+                        key={notif._id} 
+                        className={`p-2.5 rounded-xl border transition-colors flex items-start gap-2.5 ${
+                          notif.read 
+                            ? "bg-gray-950/20 border-transparent text-gray-500" 
+                            : "bg-gray-950/75 border-gray-800/80 text-gray-300"
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${notif.read ? "bg-gray-800" : "bg-emerald-500"}`}></span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium leading-relaxed break-words">{notif.message}</p>
+                          <span className="text-[9px] text-gray-600 block mt-1">
+                            {new Date(notif.createdAt).toLocaleDateString(undefined, { dateStyle: 'short' })}
+                          </span>
+                        </div>
+                        {!notif.read && (
+                          <button 
+                            onClick={() => handleMarkAsRead(notif._id)}
+                            className="text-[9px] text-emerald-400 hover:underline font-bold uppercase shrink-0"
+                          >
+                            Mark Read
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-800 text-center">
+                  <Link 
+                    to="/notifications" 
+                    onClick={() => setShowNotifDropdown(false)}
+                    className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
+                  >
+                    View All Notifications
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            <button 
+              onClick={() => navigate("/profile")}
+              className="p-2.5 bg-gray-900/60 hover:bg-gray-800/80 border border-gray-800 rounded-xl transition text-gray-400 hover:text-white flex items-center gap-1.5 text-xs font-bold"
+              title="Profile Settings"
+            >
+              <ProfileIcon className="w-4 h-4 text-emerald-400" />
+              Profile
+            </button>
+
             <button 
               onClick={handleLogout}
-              className="flex items-center px-4 py-2.5 bg-gray-900/60 backdrop-blur-md border border-gray-800 rounded-xl text-sm font-bold text-red-400 hover:text-red-300 hover:border-red-500/30 transition shadow-lg"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-900/60 hover:bg-red-500/10 border border-gray-800 hover:border-red-500/20 rounded-xl text-xs font-bold text-gray-400 hover:text-red-400 transition"
             >
-              <LogoutIcon className="w-4 h-4 mr-2" />
-              Logout
+              <LogoutIcon className="w-3.5 h-3.5" />
+              Sign Out
             </button>
           </div>
-        </header>
+        </div>
+      </nav>
 
-        <div className="mb-10">
-          <h2 className="text-lg font-bold mb-5 flex items-center gap-2.5 text-gray-300 tracking-wide uppercase text-xs">
-            <span className="w-1.5 h-4 bg-emerald-500 rounded-full inline-block"></span>
-            Report a New Issue
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <ActionCard 
-              title="Road Issue" 
-              desc="Potholes, broken paths" 
-              icon={<RoadIcon className="w-8 h-8 text-orange-400" />} 
-              color="border-orange-500/20 hover:border-orange-500/40 bg-orange-500/[0.02] hover:bg-orange-500/[0.06]"
-              onClick={() => navigate("/report?category=Road")}
-            />
-            <ActionCard 
-              title="Water Issue" 
-              desc="Leaks, contamination" 
-              icon={<WaterIcon className="w-8 h-8 text-blue-400" />} 
-              color="border-blue-500/20 hover:border-blue-500/40 bg-blue-500/[0.02] hover:bg-blue-500/[0.06]"
-              onClick={() => navigate("/report?category=Water")}
-            />
-            <ActionCard 
-              title="Surroundings" 
-              desc="Garbage, fallen trees" 
-              icon={<SurroundingsIcon className="w-8 h-8 text-emerald-400" />} 
-              color="border-emerald-500/20 hover:border-emerald-500/40 bg-emerald-500/[0.02] hover:bg-emerald-500/[0.06]"
-              onClick={() => navigate("/report?category=Surroundings")}
-            />
+      <div className="max-w-6xl mx-auto px-6 mt-8 relative z-10">
+        
+        {/* Dynamic Greeting & Hero Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          
+          {/* Welcome motivational banner */}
+          <div className="lg:col-span-2 bg-gradient-to-r from-emerald-950/20 to-gray-900/40 backdrop-blur-sm border border-emerald-500/10 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.02] rounded-full filter blur-3xl pointer-events-none group-hover:bg-emerald-500/[0.04] transition duration-500"></div>
+            <div>
+              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-bold uppercase tracking-wider border border-emerald-500/20">Citizen Champion</span>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-4 mb-2 leading-tight">
+                {greeting}, {profile.name}
+              </h1>
+              <p className="text-gray-400 text-sm font-light leading-relaxed max-w-lg mb-6">
+                Your actions build a cleaner, safer, and highly organized city. Report civic complaints instantly, verify duplicate reports nearby, and track resolution timelines in real-time.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button 
+                onClick={() => navigate("/report")} 
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-gray-950 font-extrabold text-xs rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+              >
+                <span>Report New Issue</span>
+                <ArrowRightIcon className="w-3 h-3 text-gray-950" />
+              </button>
+              <button 
+                onClick={() => navigate("/public-reports")} 
+                className="px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white border border-gray-800 hover:border-gray-700 font-bold text-xs rounded-xl transition"
+              >
+                Explore Local Issues
+              </button>
+            </div>
+          </div>
+
+          {/* Gamified Citizen Profile Panel (Upgraded) */}
+          <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 flex flex-col justify-between shadow-xl">
+            <div className="flex items-center gap-3.5 pb-4 border-b border-gray-800/60">
+              <div className="w-12 h-12 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center border border-emerald-500/20 text-gray-950 font-black text-xl shadow-md">
+                {profile.name[0]?.toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-extrabold text-white tracking-tight break-all">{profile.name}</h3>
+                <span className="text-[9px] text-gray-500 font-bold block uppercase tracking-wider mt-0.5">{profile.id}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 my-4">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Name</span>
+                <span className="text-gray-300 font-bold">{profile.name}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Email</span>
+                <span className="text-gray-300 font-bold truncate max-w-[140px]">{profile.email}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Role</span>
+                <span className="text-emerald-400 font-extrabold uppercase text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
+                  {profile.role}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">Joined Ward</span>
+                <span className="text-gray-300 font-bold">{profile.joined}</span>
+              </div>
+              <div className="flex justify-between text-xs pt-1">
+                <span className="text-emerald-400 font-black">Level {currentLevel} Sentinel</span>
+                <span className="text-gray-500 font-medium">{impactScore} pts</span>
+              </div>
+              
+              {/* Dynamic Level Progress Bar */}
+              <div className="w-full">
+                <div className="h-1.5 w-full bg-gray-950 rounded-full overflow-hidden border border-gray-800/80">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-1000 ease-out" 
+                    style={{ width: `${levelProgress}%` }}
+                  ></div>
+                </div>
+                <div className="flex justify-between items-center text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1">
+                  <span>Tier Progress</span>
+                  <span>{Math.round(levelProgress)}% to Level {currentLevel + 1}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-800/60 flex justify-between items-center text-xs">
+              <span className="text-gray-500 font-bold uppercase tracking-wider text-[10px]">Impact Rating</span>
+              <span className="text-emerald-400 font-black">{impactScore > 100 ? "Gold Shield" : impactScore > 40 ? "Silver Shield" : "Bronze Sentinel"}</span>
+            </div>
           </div>
         </div>
 
-        <div>
-          <h2 className="text-lg font-bold mb-5 flex items-center gap-2.5 text-gray-300 tracking-wide uppercase text-xs">
-            <span className="w-1.5 h-4 bg-teal-500 rounded-full inline-block"></span>
-            Explore & Track
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            <ActionCard 
-              title="My Reports" 
-              desc="Track your submissions" 
-              icon={<ReportsIcon className="w-8 h-8 text-purple-400" />} 
-              color="border-purple-500/20 hover:border-purple-500/40 bg-purple-500/[0.02] hover:bg-purple-500/[0.06]"
-              onClick={() => navigate("/my-reports")}
-            />
-            <ActionCard 
-              title="Public Reports" 
-              desc="View issues near you" 
-              icon={<PublicIcon className="w-8 h-8 text-teal-400" />} 
-              color="border-teal-500/20 hover:border-teal-500/40 bg-teal-500/[0.02] hover:bg-teal-500/[0.06]"
+        {/* Dynamic Trust and Achievements Badges Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          
+          {/* Community Impact Card & Scores */}
+          <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-emerald-500 rounded-full inline-block"></span>
+                Neighborhood Trust Index
+              </h3>
+              
+              <div className="flex items-center gap-4 my-5">
+                <div className="relative w-16 h-16 rounded-full border-4 border-emerald-500/10 border-t-emerald-400 flex items-center justify-center font-black text-emerald-400 text-xl shadow-md animate-spin-slow">
+                  94%
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-extrabold text-white">Coimbatore Dispatch Speed</h4>
+                  <p className="text-[10px] text-gray-400 leading-relaxed mt-0.5">Municipal authorities review 94% of reported duplications within 24h.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t border-gray-800/60 grid grid-cols-2 gap-4 text-center">
+              <div className="bg-gray-950/40 p-2.5 rounded-xl border border-gray-800/50">
+                <span className="text-lg font-black text-emerald-400">{resolvedCount}</span>
+                <p className="text-[9px] text-gray-500 uppercase font-bold mt-0.5">Your Resolutions</p>
+              </div>
+              <div className="bg-gray-950/40 p-2.5 rounded-xl border border-gray-800/50">
+                <span className="text-lg font-black text-teal-400">{impactScore}</span>
+                <p className="text-[9px] text-gray-500 uppercase font-bold mt-0.5">Impact Score</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievement and badge system */}
+          <div className="lg:col-span-2 bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+            <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-3 bg-teal-500 rounded-full inline-block"></span>
+              Civic Sentinel Badges
+            </h3>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5">
+              {badges.map((badge) => (
+                <div 
+                  key={badge.id}
+                  className={`p-4 rounded-2xl border text-center transition flex flex-col items-center justify-between group h-full ${
+                    badge.earned 
+                      ? "bg-gray-950/80 border-emerald-500/20 shadow-lg shadow-emerald-500/[0.01]" 
+                      : "bg-gray-950/20 border-gray-800/60 opacity-40"
+                  }`}
+                >
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-lg shadow-md border ${
+                    badge.earned 
+                      ? `bg-gradient-to-tr ${badge.color} text-gray-950 border-white/10 group-hover:scale-105 transition-transform duration-300` 
+                      : "bg-gray-900 text-gray-600 border-gray-800"
+                  }`}>
+                    {badge.earned ? "✓" : "🔒"}
+                  </div>
+                  <div className="mt-3">
+                    <h4 className="text-[11px] font-extrabold text-white leading-tight">{badge.title}</h4>
+                    <p className="text-[9px] text-gray-500 leading-snug mt-1 max-w-[100px] mx-auto">{badge.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics Trends & Nearby issues split */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          
+          {/* Premium Analytics CSS/SVG Chart */}
+          <div className="lg:col-span-2 bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-3 bg-emerald-500 rounded-full inline-block"></span>
+                  Reporting Velocity Analytics
+                </h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">Complaint distributions across Coimbatore</p>
+              </div>
+              
+              <div className="flex items-center gap-4 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-orange-400 inline-block"></span>Road ({roadCount})</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-blue-400 inline-block"></span>Water ({waterCount})</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-400 inline-block"></span>Environs ({surroundingsCount})</span>
+              </div>
+            </div>
+
+            {/* Custom 3D SVG Bar Chart */}
+            <div className="space-y-4 pt-2">
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-bold">
+                  <span className="text-gray-400">Road Complaints</span>
+                  <span className="text-orange-400">{roadCount} registered</span>
+                </div>
+                <div className="h-2 w-full bg-gray-950 border border-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-1000"
+                    style={{ width: `${roadPercent}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-bold">
+                  <span className="text-gray-400">Water Leaks & Outages</span>
+                  <span className="text-blue-400">{waterCount} registered</span>
+                </div>
+                <div className="h-2 w-full bg-gray-950 border border-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-1000"
+                    style={{ width: `${waterPercent}%` }}
+                  ></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1.5 font-bold">
+                  <span className="text-gray-400">Surroundings & Sanitation</span>
+                  <span className="text-emerald-400">{surroundingsCount} registered</span>
+                </div>
+                <div className="h-2 w-full bg-gray-950 border border-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-1000"
+                    style={{ width: `${surroundingsPercent}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recommendation Action Panel & Alerts */}
+          <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-teal-500 rounded-full inline-block"></span>
+                Nearby Civic Recommendations
+              </h3>
+
+              <div className="space-y-3.5 mt-4">
+                <div className="p-3 bg-gray-950/60 border border-gray-800/80 rounded-2xl flex items-start gap-2.5">
+                  <span className="text-emerald-400 text-xs mt-0.5">💡</span>
+                  <div>
+                    <h4 className="text-[11px] font-extrabold text-white">Validate Local Water Leaks</h4>
+                    <p className="text-[9px] text-gray-500 mt-0.5 leading-relaxed">A water pipe leak reported nearby is seeking verification votes to advance dispatch tier.</p>
+                  </div>
+                </div>
+                <div className="p-3 bg-gray-950/60 border border-gray-800/80 rounded-2xl flex items-start gap-2.5">
+                  <span className="text-emerald-400 text-xs mt-0.5">📍</span>
+                  <div>
+                    <h4 className="text-[11px] font-extrabold text-white">Submit a Pothole Coordinate</h4>
+                    <p className="text-[9px] text-gray-500 mt-0.5 leading-relaxed">Coimbatore Central has open service windows for Road repairs this week.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button 
               onClick={() => navigate("/public-reports")}
-            />
-            <ActionCard 
-              title="Heat Map" 
-              desc="See issue hotspots" 
-              icon={<HeatmapIcon className="w-8 h-8 text-red-400" />} 
-              color="border-red-500/20 hover:border-red-500/40 bg-red-500/[0.02] hover:bg-red-500/[0.06]"
-              onClick={() => navigate("/map?view=heatmap")}
-            />
+              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-gray-950 text-xs font-bold rounded-xl transition mt-5 flex items-center justify-center gap-1.5"
+            >
+              Verify Public Reports
+              <ArrowRightIcon className="w-3.5 h-3.5 text-gray-950" />
+            </button>
           </div>
         </div>
+
+        {/* Main Dashboard Interactive Split Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Left Column: Interactive Map Widget & Activity Feed */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* SaaS Interactive Mini Map Widget */}
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl overflow-hidden shadow-xl">
+              <div className="p-5 border-b border-gray-800/80 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-extrabold tracking-wider uppercase text-gray-300 flex items-center gap-2">
+                    <span className="w-1.5 h-3.5 bg-emerald-500 rounded-full inline-block"></span>
+                    Live Proximity Monitor
+                  </h2>
+                  <p className="text-xs text-gray-500 mt-0.5">Real-time local complaints visual overview</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setActiveTab("map")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      activeTab === "map" 
+                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Markers
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab("heatmap")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                      activeTab === "heatmap" 
+                        ? "bg-red-500/10 text-red-400 border border-red-500/20" 
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Heatmap
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-72 w-full relative z-10 bg-gray-950">
+                {loading ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <p className="text-xs text-gray-500 uppercase tracking-widest animate-pulse">Loading map overlays...</p>
+                  </div>
+                ) : (
+                  <MapContainer
+                    center={[11.0168, 76.9558]} 
+                    zoom={12}
+                    style={{ height: "100%", width: "100%" }}
+                    zoomControl={false}
+                  >
+                    <TileLayer
+                      attribution="© OpenStreetMap"
+                      url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+                    />
+                    {issues.map((issue) => {
+                      if (!issue.location?.coordinates) return null;
+                      const [lng, lat] = issue.location.coordinates;
+
+                      if (activeTab === "heatmap") {
+                        const intensity = issue.upvotes?.length || 0;
+                        const radius = 25 + (intensity * 5);
+                        const color = intensity > 5 ? "#ef4444" : intensity > 2 ? "#f97316" : "#eab308";
+                        
+                        return (
+                          <CircleMarker
+                            key={`mini-heat-${issue._id}`}
+                            center={[lat, lng]}
+                            radius={radius}
+                            stroke={false}
+                            pathOptions={{ fillColor: color, fillOpacity: 0.2 }}
+                          />
+                        );
+                      }
+
+                      return (
+                        <CircleMarker
+                          key={`mini-mark-${issue._id}`}
+                          center={[lat, lng]}
+                          radius={6}
+                          pathOptions={{
+                            color: "#10b981",
+                            fillColor: "#10b981",
+                            fillOpacity: 0.8,
+                            weight: 2
+                          }}
+                        >
+                          <Popup>
+                            <div className="p-1 min-w-[120px] text-gray-950">
+                              <h4 className="font-extrabold text-xs">{issue.title}</h4>
+                              <p className="text-[10px] text-gray-500 uppercase font-bold mt-0.5">{issue.category}</p>
+                            </div>
+                          </Popup>
+                        </CircleMarker>
+                      );
+                    })}
+                  </MapContainer>
+                )}
+              </div>
+              <div className="p-4 bg-gray-950/40 border-t border-gray-800/80 flex items-center justify-between text-xs">
+                <span className="text-gray-500">Monitor tracking {issues.length} active neighborhood nodes</span>
+                <Link to="/map" className="text-emerald-400 hover:text-emerald-300 font-bold hover:underline transition flex items-center gap-1">
+                  Fullscreen Map view
+                  <ArrowRightIcon className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Recent Civic Activity Timeline (Upgraded) */}
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+              <h2 className="text-sm font-extrabold tracking-wider uppercase text-gray-300 mb-6 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-teal-500 rounded-full inline-block"></span>
+                Dynamic Activity Log
+              </h2>
+
+              {loading ? (
+                <div className="space-y-4">
+                  <div className="h-10 bg-gray-800/50 rounded-xl animate-pulse"></div>
+                  <div className="h-10 bg-gray-800/50 rounded-xl animate-pulse"></div>
+                </div>
+              ) : myIssues.length === 0 ? (
+                <p className="text-xs text-gray-500 italic py-4 text-center">No reports registered to your account yet.</p>
+              ) : (
+                <div className="space-y-5 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1px] before:bg-gray-800">
+                  {myIssues.slice(0, 4).map((issue) => (
+                    <div key={issue._id} className="relative pl-8 flex items-start justify-between group">
+                      <span className="absolute left-1.5 top-2 w-3.5 h-3.5 rounded-full bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center group-hover:scale-110 transition duration-200"></span>
+                      <div>
+                        <h4 className="text-sm font-bold text-white tracking-tight break-all">{issue.title}</h4>
+                        <p className="text-xs text-gray-400 mt-1 font-light leading-relaxed">
+                          Verification Score: <span className="text-emerald-400 font-semibold">+{issue.upvotes?.length || 0} votes</span> &middot; Filed in {profile.location}
+                        </p>
+                        <span className="text-[10px] text-gray-500 font-bold mt-1 inline-block">
+                          Created {new Date(issue.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2.5 py-1 border rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          issue.status === "Resolved" 
+                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                            : issue.status === "In Progress"
+                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                            : "bg-orange-500/10 text-orange-400 border-orange-500/20"
+                        }`}>
+                          {issue.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* Right Column: Quick Action grid & Trust Impact metrics */}
+          <div className="space-y-8">
+            
+            {/* Quick Actions Panel */}
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+              <h2 className="text-sm font-extrabold tracking-wider uppercase text-gray-300 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-emerald-500 rounded-full inline-block"></span>
+                Quick Issue Triggers
+              </h2>
+
+              <div className="space-y-3">
+                <QuickActionButton 
+                  title="Report Road Pothole" 
+                  icon={<RoadIcon className="w-4 h-4 text-orange-400" />} 
+                  onClick={() => navigate("/report?category=Road")} 
+                />
+                <QuickActionButton 
+                  title="Report Water Leak" 
+                  icon={<WaterIcon className="w-4 h-4 text-blue-400" />} 
+                  onClick={() => navigate("/report?category=Water")} 
+                />
+                <QuickActionButton 
+                  title="Report Trash Accumulation" 
+                  icon={<SurroundingsIcon className="w-4 h-4 text-emerald-400" />} 
+                  onClick={() => navigate("/report?category=Surroundings")} 
+                />
+              </div>
+            </div>
+
+            {/* Nearby Issues Summary Widget */}
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+              <h2 className="text-sm font-extrabold tracking-wider uppercase text-gray-300 mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-teal-500 rounded-full inline-block"></span>
+                Public Ward Issues
+              </h2>
+
+              {loading ? (
+                <div className="space-y-3">
+                  <div className="h-8 bg-gray-800/40 rounded-xl animate-pulse"></div>
+                  <div className="h-8 bg-gray-800/40 rounded-xl animate-pulse"></div>
+                </div>
+              ) : issues.length === 0 ? (
+                <p className="text-xs text-gray-500 italic">No public ward complaints registered.</p>
+              ) : (
+                <div className="space-y-3">
+                  {issues.slice(0, 3).map((issue) => (
+                    <div 
+                      key={`nearby-${issue._id}`}
+                      className="p-3 bg-gray-950/60 hover:bg-gray-900 border border-gray-800/80 rounded-2xl transition flex items-center justify-between text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <h4 className="font-extrabold text-white truncate break-all">{issue.title}</h4>
+                        <span className="text-[9px] text-gray-500 font-bold block mt-0.5">{issue.category} &middot; {issue.status}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1 bg-gray-900 px-2 py-1 rounded-lg border border-gray-800 shrink-0">
+                        <UpvoteIcon className="w-3 h-3 text-emerald-400" />
+                        <span className="text-[10px] text-gray-300 font-black">{issue.upvotes?.length || 0}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Core Track Actions */}
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-3xl p-6 shadow-xl">
+              <h2 className="text-sm font-extrabold tracking-wider uppercase text-gray-300 mb-5 flex items-center gap-2">
+                <span className="w-1.5 h-3.5 bg-emerald-500 rounded-full inline-block"></span>
+                Core Submissions
+              </h2>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                <Link 
+                  to="/my-reports" 
+                  className="bg-gray-950/80 hover:bg-gray-900 border border-gray-800 hover:border-gray-700 p-4 rounded-2xl text-center transition group flex flex-col items-center justify-center"
+                >
+                  <ReportsIcon className="w-6 h-6 text-purple-400 mb-2 group-hover:scale-105 transition-transform" />
+                  <span className="text-xs font-bold text-white">My Actions</span>
+                </Link>
+                <Link 
+                  to="/public-reports" 
+                  className="bg-gray-950/80 hover:bg-gray-900 border border-gray-800 hover:border-gray-700 p-4 rounded-2xl text-center transition group flex flex-col items-center justify-center"
+                >
+                  <PublicIcon className="w-6 h-6 text-teal-400 mb-2 group-hover:scale-105 transition-transform" />
+                  <span className="text-xs font-bold text-white">Public Feed</span>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
     </div>
   );
 }
 
-// Reusable Card Component
-function ActionCard({ title, desc, icon, color, onClick }) {
+// Reusable Metric Card
+function MetricCard({ title, value, desc, icon }) {
+  return (
+    <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-2xl p-5 shadow-lg relative group overflow-hidden">
+      <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/[0.01] rounded-full filter blur-xl group-hover:bg-emerald-500/[0.02] transition"></div>
+      <div className="flex justify-between items-center mb-2.5">
+        <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{title}</span>
+        <div className="w-7 h-7 bg-gray-950 rounded-lg flex items-center justify-center border border-gray-800">
+          {icon}
+        </div>
+      </div>
+      <h3 className="text-2xl font-black text-white tracking-tight">{value}</h3>
+      <p className="text-[10px] text-gray-500 font-medium mt-1 leading-none">{desc}</p>
+    </div>
+  );
+}
+
+// Reusable Quick Action Button
+function QuickActionButton({ title, icon, onClick }) {
   return (
     <button 
       onClick={onClick}
-      className={`text-left p-6 rounded-2xl bg-gray-900/60 backdrop-blur-sm border ${color} transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl group`}
+      className="w-full flex items-center justify-between p-4 bg-gray-950/60 hover:bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-2xl text-left transition group"
     >
-      <div className="mb-4 group-hover:scale-105 transition-transform duration-300">
-        {icon}
+      <div className="flex items-center gap-3.5">
+        <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center border border-gray-800 group-hover:scale-105 transition-transform">
+          {icon}
+        </div>
+        <span className="text-xs font-bold text-white tracking-tight">{title}</span>
       </div>
-      <h3 className="text-lg font-bold text-white mb-1.5 tracking-tight">{title}</h3>
-      <p className="text-sm text-gray-400 leading-relaxed font-light">{desc}</p>
+      <ArrowRightIcon className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
     </button>
   );
 }
