@@ -5,11 +5,15 @@ import {
   ArrowLeftIcon, 
   ProfileIcon, 
   ReportsIcon, 
-  LogoutIcon 
+  LogoutIcon,
+  SunIcon,
+  MoonIcon
 } from "../components/SvgIcon";
+import { useTheme } from "../hooks/useTheme";
 
 function Profile() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [stats, setStats] = useState({ reported: 0 });
   const [profile, setProfile] = useState({
     name: localStorage.getItem("name") || "Citizen",
@@ -58,75 +62,86 @@ function Profile() {
 
   return (
     <div 
-      className="min-h-screen bg-gray-950 text-white relative overflow-hidden"
+      className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-800 dark:text-white relative overflow-hidden"
       style={{
-        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0)",
+        backgroundImage: theme === "dark" 
+          ? "radial-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 0)" 
+          : "radial-gradient(rgba(0, 0, 0, 0.02) 1px, transparent 0)",
         backgroundSize: "24px 24px"
       }}
     >
-      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full mix-blend-multiply filter blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/[0.03] dark:bg-emerald-500/5 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[128px] pointer-events-none"></div>
 
-      <header className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 p-4 sticky top-0 z-20 shadow-md">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-4 sticky top-0 z-20 shadow-sm dark:shadow-md">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link 
               to="/dashboard" 
-              className="flex items-center text-gray-400 hover:text-white transition font-semibold text-sm"
+              className="flex items-center text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white transition font-semibold text-sm"
             >
               <ArrowLeftIcon className="w-4 h-4 mr-1.5" />
               Back
             </Link>
-            <span className="text-gray-600 font-light">|</span>
-            <h1 className="text-lg font-black tracking-tight">Profile</h1>
+            <span className="text-gray-300 dark:text-gray-600 font-light">|</span>
+            <h1 className="text-lg font-black tracking-tight text-slate-800 dark:text-white">Profile</h1>
           </div>
+
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="p-2 bg-gray-100 dark:bg-gray-800/80 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-750 rounded-xl transition text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white"
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === "dark" ? <SunIcon className="w-4 h-4 text-emerald-400" /> : <MoonIcon className="w-4 h-4 text-emerald-600" />}
+          </button>
         </div>
       </header>
 
       <div className="max-w-md mx-auto mt-12 px-4 relative z-10">
-        <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-800/80 rounded-2xl p-8 shadow-xl">
+        <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800/80 rounded-2xl p-8 shadow-sm dark:shadow-xl">
           
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-full mx-auto mb-3.5 flex items-center justify-center shadow-lg border border-emerald-500/20 text-gray-950 font-black text-2xl">
               {profile.name[0]?.toUpperCase()}
             </div>
-            <h2 className="text-xl font-black tracking-tight text-white">{profile.name}</h2>
-            <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest mt-0.5">Active Sentinel</p>
+            <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{profile.name}</h2>
+            <p className="text-emerald-600 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mt-0.5">Active Sentinel</p>
           </div>
 
           {/* Explicit User Details Section */}
-          <div className="bg-gray-950/80 border border-gray-800/60 rounded-xl p-4 mb-6 space-y-3.5">
+          <div className="bg-slate-50 dark:bg-gray-950/80 border border-gray-200 dark:border-gray-800/60 rounded-xl p-4 mb-6 space-y-3.5">
             <div className="flex justify-between text-xs items-center">
               <span className="text-gray-500 font-medium">Name</span>
-              <span className="text-white font-extrabold">{profile.name}</span>
+              <span className="text-slate-800 dark:text-white font-extrabold">{profile.name}</span>
             </div>
             <div className="flex justify-between text-xs items-center">
               <span className="text-gray-500 font-medium">Email</span>
-              <span className="text-white font-extrabold break-all ml-4 text-right max-w-[180px]">{profile.email}</span>
+              <span className="text-slate-800 dark:text-white font-extrabold break-all ml-4 text-right max-w-[180px]">{profile.email}</span>
             </div>
             <div className="flex justify-between text-xs items-center">
               <span className="text-gray-500 font-medium">Role</span>
-              <span className="text-emerald-400 font-black uppercase text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="text-emerald-600 dark:text-emerald-400 font-black uppercase text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                 {profile.role}
               </span>
             </div>
             <div className="flex justify-between text-xs items-center">
               <span className="text-gray-500 font-medium">Joined</span>
-              <span className="text-white font-extrabold">{profile.joined}</span>
+              <span className="text-slate-800 dark:text-white font-extrabold">{profile.joined}</span>
             </div>
           </div>
 
           <div className="flex justify-center gap-6 mb-6">
-            <div className="bg-gray-950/40 border border-gray-800/60 rounded-xl p-4 w-full shadow-inner flex flex-col items-center justify-center">
-              <p className="text-3xl font-black text-emerald-400 tracking-tight">{stats.reported}</p>
+            <div className="bg-slate-50 dark:bg-gray-950/40 border border-gray-200 dark:border-gray-800/60 rounded-xl p-4 w-full shadow-inner flex flex-col items-center justify-center">
+              <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{stats.reported}</p>
               <p className="text-[10px] text-gray-500 font-bold mt-1 uppercase tracking-wider">Issues Reported</p>
             </div>
           </div>
 
           <button
             onClick={handleLogout}
-            className="w-full py-3.5 bg-transparent border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm"
+            className="w-full py-3.5 bg-transparent border border-red-500/30 text-red-550 dark:text-red-400 hover:bg-red-500/10 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm"
           >
-            <LogoutIcon className="w-4 h-4 text-red-400" />
+            <LogoutIcon className="w-4 h-4 text-red-500 dark:text-red-400" />
             Logout Account
           </button>
         </div>

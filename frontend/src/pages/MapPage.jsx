@@ -9,10 +9,12 @@ import {
   UpvoteIcon 
 } from "../components/SvgIcon";
 import { Spinner } from "../components/LoadingSkeleton";
+import { useTheme } from "../hooks/useTheme";
 
 function MapPage() {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -43,35 +45,35 @@ function MapPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950 text-white">
-      <header className="bg-gray-900/80 backdrop-blur-md border-b border-gray-800 p-4 shrink-0 z-20 shadow-md flex justify-between items-center">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-gray-950 text-slate-800 dark:text-white">
+      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 p-4 shrink-0 z-20 shadow-sm dark:shadow-md flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Link 
             to="/dashboard" 
-            className="flex items-center text-gray-400 hover:text-white transition font-semibold text-sm"
+            className="flex items-center text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white transition font-semibold text-sm"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-1.5" />
             Back
           </Link>
-          <span className="text-gray-600 font-light">|</span>
-          <h1 className="text-lg font-black tracking-tight">City Issue Map</h1>
+          <span className="text-gray-300 dark:text-gray-600 font-light">|</span>
+          <h1 className="text-lg font-black tracking-tight text-slate-850 dark:text-white">City Issue Map</h1>
         </div>
         <button 
           onClick={toggleView}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shadow-lg border ${
             isHeatmap 
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" 
-              : "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20" 
+              : "bg-red-500/10 text-red-650 dark:text-red-400 border-red-500/20 hover:bg-red-500/20"
           }`}
         >
           {isHeatmap ? (
             <>
-              <LocationIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <LocationIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               Switch to Markers
             </>
           ) : (
             <>
-              <HeatmapIcon className="w-3.5 h-3.5 text-red-400" />
+              <HeatmapIcon className="w-3.5 h-3.5 text-red-650 dark:text-red-400" />
               Switch to Heatmap
             </>
           )}
@@ -80,9 +82,9 @@ function MapPage() {
 
       <div className="flex-grow relative">
         {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/90 z-30 backdrop-blur-sm">
-            <Spinner className="w-8 h-8 text-emerald-400 mb-2" />
-            <p className="text-emerald-400/80 font-bold text-xs uppercase tracking-widest">Loading Map Datasets...</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 dark:bg-gray-950/90 z-30 backdrop-blur-sm">
+            <Spinner className="w-8 h-8 text-emerald-500 dark:text-emerald-400 mb-2" />
+            <p className="text-emerald-600/80 dark:text-emerald-400/80 font-bold text-xs uppercase tracking-widest">Loading Map Datasets...</p>
           </div>
         )}
 
@@ -93,8 +95,12 @@ function MapPage() {
           style={{ height: "calc(100vh - 73px)", width: "100%", zIndex: 10 }}
         >
           <TileLayer
-            attribution="© OpenStreetMap"
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+            key={theme}
+            attribution={theme === "dark" ? "© CartoDB" : "© OpenStreetMap"}
+            url={theme === "dark" 
+              ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png" 
+              : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
           />
 
           {issues.map((issue) => {
@@ -125,16 +131,16 @@ function MapPage() {
             return (
               <Marker key={issue._id} position={[lat, lng]}>
                 <Popup className="custom-popup">
-                  <div className="p-2 min-w-[160px] bg-gray-900 text-white rounded-xl border border-gray-800 shadow-xl">
-                    <h3 className="font-extrabold text-sm text-white mb-1.5 tracking-tight">{issue.title}</h3>
+                  <div className="p-2 min-w-[160px] bg-white dark:bg-gray-900 text-slate-800 dark:text-white rounded-xl border border-gray-250 dark:border-gray-800 shadow-xl">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white mb-1.5 tracking-tight">{issue.title}</h3>
                     <p className="text-[10px] uppercase font-bold tracking-wider text-gray-500 mb-2.5">{issue.category}</p>
                     
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-800/80">
-                      <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
-                        <UpvoteIcon className="w-3.5 h-3.5 text-emerald-400" />
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-850">
+                      <span className="text-[10px] text-slate-600 dark:text-gray-455 font-semibold flex items-center gap-1">
+                        <UpvoteIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         {issue.upvotes?.length || 0} votes
                       </span>
-                      <span className="text-[10px] text-gray-400 font-bold">
+                      <span className="text-[10px] text-slate-600 dark:text-gray-455 font-bold">
                         {issue.priority}
                       </span>
                     </div>
