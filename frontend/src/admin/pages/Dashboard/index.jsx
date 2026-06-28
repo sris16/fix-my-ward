@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { dashboardStats, weeklyTrends, departmentDistribution, recentActivities } from "../../data/dashboard";
+import { Link } from "react-router-dom";
+import { dashboardStats } from "../../data/dashboard";
 import { dummyIssues } from "../../data/issues";
 import { dummyDepartments } from "../../data/departments";
 import { StatCard } from "../../components/ui/StatCard";
@@ -11,26 +11,7 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 import { PriorityBadge } from "../../components/ui/PriorityBadge";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const [issuesData, setIssuesData] = useState(dummyIssues.slice(0, 4));
-
-  // Custom inline SVG Chart rendering (glowing vector line)
-  const maxWeeklyValue = Math.max(...weeklyTrends.map(t => Math.max(t.reported, t.resolved)));
-  const width = 500;
-  const height = 150;
-  const padding = 25;
-
-  const reportedPoints = weeklyTrends.map((t, i) => {
-    const x = padding + (i * (width - 2 * padding)) / (weeklyTrends.length - 1);
-    const y = height - padding - (t.reported * (height - 2 * padding)) / maxWeeklyValue;
-    return `${x},${y}`;
-  }).join(" ");
-
-  const resolvedPoints = weeklyTrends.map((t, i) => {
-    const x = padding + (i * (width - 2 * padding)) / (weeklyTrends.length - 1);
-    const y = height - padding - (t.resolved * (height - 2 * padding)) / maxWeeklyValue;
-    return `${x},${y}`;
-  }).join(" ");
+  const [issuesData] = useState(dummyIssues.slice(0, 4));
 
   return (
     <div className="space-y-6">
@@ -38,7 +19,7 @@ export default function Dashboard() {
       {/* 1. Page Header */}
       <PageHeader 
         title="Command Operations" 
-        subtitle="Real-time municipal complaints monitoring and dispatch control"
+        subtitle="Real-time municipal complaints monitoring and dispatch control (Version 1)"
         actions={
           <div className="flex gap-2.5">
             <Link 
@@ -52,7 +33,7 @@ export default function Dashboard() {
             </Link>
             <Link 
               to="/admin/issues" 
-              className="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-slate-800 dark:text-white border border-gray-250 dark:border-gray-800 font-bold text-xs rounded-xl transition"
+              className="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 text-slate-800 dark:text-white border border-gray-250 dark:border-gray-800/80 font-bold text-xs rounded-xl transition"
             >
               Manage Issues
             </Link>
@@ -64,8 +45,8 @@ export default function Dashboard() {
       <div className="bg-gradient-to-r from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-gray-900/40 border border-emerald-500/20 dark:border-emerald-500/10 rounded-3xl p-6 shadow-sm dark:shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.01] dark:bg-emerald-500/[0.02] rounded-full filter blur-3xl pointer-events-none"></div>
         <div className="space-y-1 relative z-10">
-          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/20">
-            System Online
+          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-455 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/20">
+            System Online - V1 Foundation
           </span>
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight pt-1">
             Ward Dispatch Status: Optimal
@@ -80,13 +61,13 @@ export default function Dashboard() {
             <p className="text-[9px] text-gray-500 uppercase font-black mt-0.5">Critical Cases</p>
           </div>
           <div className="bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800/80 rounded-2xl px-4 py-2 text-center shadow-sm">
-            <span className="text-lg font-black text-emerald-650 dark:text-emerald-400">{dashboardStats.averageResolutionTime}</span>
+            <span className="text-lg font-black text-emerald-650 dark:text-emerald-450">{dashboardStats.averageResolutionTime}</span>
             <p className="text-[9px] text-gray-500 uppercase font-black mt-0.5">Resolution SLA</p>
           </div>
         </div>
       </div>
 
-      {/* 3. Statistics Grid */}
+      {/* 3. Statistics Grid (4 KPI Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Registered Complaints"
@@ -141,9 +122,10 @@ export default function Dashboard() {
       {/* 4. Main Section Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column: Recent Reports Table */}
+        {/* Left Column: Recent Reports Table & Department Oversight */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Recent Reports */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <SectionTitle title="Recent Citizen Submissions" subtitle="Live incoming complaint tickets requiring triage" />
@@ -165,7 +147,7 @@ export default function Dashboard() {
                 "Ward / Location"
               ]}
               data={issuesData}
-              renderRow={(row, idx) => (
+              renderRow={(row) => (
                 <tr 
                   key={row.id} 
                   className="hover:bg-slate-50/50 dark:hover:bg-gray-800/20 transition-colors"
@@ -205,7 +187,7 @@ export default function Dashboard() {
               {dummyDepartments.slice(0, 4).map((dept) => (
                 <div 
                   key={dept.id} 
-                  className="p-5 bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-2xl shadow-sm flex flex-col justify-between hover:border-slate-300 dark:hover:border-gray-700 transition"
+                  className="p-5 bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-2xl shadow-sm flex flex-col justify-between hover:border-slate-350 dark:hover:border-gray-700 transition"
                 >
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 pr-2">
@@ -233,120 +215,36 @@ export default function Dashboard() {
 
         </div>
 
-        {/* Right Column: Weekly Chart & Map Skeletons */}
+        {/* Right Column: Chart Placeholder & Map Placeholder */}
         <div className="space-y-6">
           
-          {/* Weekly Chart Placeholder */}
-          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800/80 rounded-3xl p-5 shadow-sm dark:shadow-md">
-            <SectionTitle title="Weekly Ticket Velocity" subtitle="Daily Reported vs. Resolved complaints" />
+          {/* Chart Placeholder */}
+          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800/80 rounded-3xl p-5 shadow-sm dark:shadow-md min-h-[220px] flex flex-col justify-between">
+            <SectionTitle title="Weekly Trends" subtitle="Daily Reported vs. Resolved complaints" />
             
-            {/* Custom glowing inline chart */}
-            <div className="mt-4 bg-slate-50 dark:bg-gray-950/80 border border-gray-250 dark:border-gray-900 rounded-2xl p-4 flex flex-col justify-between">
-              <div className="relative">
-                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-36 overflow-visible">
-                  {/* Grid Lines */}
-                  <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="currentColor" className="text-gray-200 dark:text-gray-900" strokeWidth="1" />
-                  <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="currentColor" className="text-gray-200 dark:text-gray-900" strokeWidth="1" strokeDasharray="3 3" />
-                  <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="currentColor" className="text-gray-200 dark:text-gray-900" strokeWidth="1" />
-
-                  {/* Gradient Area Fill - Reported */}
-                  <path
-                    d={`M ${padding},${height - padding} L ${reportedPoints} L ${width - padding},${height - padding} Z`}
-                    fill="url(#reportedGlow)"
-                    className="opacity-20 dark:opacity-10"
-                  />
-
-                  {/* SVG Paths */}
-                  <polyline points={reportedPoints} fill="none" stroke="#f97316" strokeWidth="2.5" className="drop-shadow-[0_2px_4px_rgba(249,115,22,0.3)]" />
-                  <polyline points={resolvedPoints} fill="none" stroke="#10b981" strokeWidth="2.5" className="drop-shadow-[0_2px_4px_rgba(16,185,129,0.3)]" />
-
-                  {/* SVG Definitions */}
-                  <defs>
-                    <linearGradient id="reportedGlow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f97316" />
-                      <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-
-              {/* Day Labels */}
-              <div className="flex justify-between items-center text-[9px] text-gray-500 font-bold uppercase tracking-wider px-2.5 mt-2">
-                {weeklyTrends.map((t) => (
-                  <span key={t.day}>{t.day}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-4 text-[9px] text-gray-550 font-bold uppercase tracking-wider justify-center">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded bg-orange-500 inline-block"></span>
-                Reported Trend
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span>
-                Resolved Trend
-              </span>
+            <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-250 dark:border-gray-800 rounded-2xl p-6 my-4 text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-8 h-8 text-gray-400 dark:text-gray-600 mb-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v16.5M21 19.5H3.75M6.75 15h2.25V6.75H6.75V15zm4 0h2.25V10.5h-2.25v4.5zm4 0h2.25V8.25h-2.25v6.75zm4 0H21V12h-2.25v3z" />
+              </svg>
+              <span className="text-xs font-bold text-slate-800 dark:text-gray-350">[ Chart Placeholder ]</span>
+              <p className="text-[10px] text-gray-500 max-w-[200px] mt-1 leading-normal">
+                Chart integration will be implemented in Version 2.
+              </p>
             </div>
           </div>
 
-          {/* Command Map Radar Placeholder */}
-          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800/80 rounded-3xl p-5 shadow-sm dark:shadow-md">
+          {/* Map Placeholder */}
+          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-200 dark:border-gray-800/80 rounded-3xl p-5 shadow-sm dark:shadow-md min-h-[220px] flex flex-col justify-between">
             <SectionTitle title="Command Dispatch Grid" subtitle="Tactical mapping overlay of complaints" />
             
-            {/* Visual Blueprint styled radar container */}
-            <div className="mt-4 h-64 bg-slate-900 dark:bg-black border border-gray-800 rounded-2xl relative overflow-hidden flex items-center justify-center">
-              
-              {/* Radar Grid Overlay */}
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.08)_1px,transparent_0),linear-gradient(90deg,rgba(16,185,129,0.08)_1px,transparent_0)] bg-[size:16px_16px] pointer-events-none"></div>
-              
-              {/* Radar Sweep Animation (pure CSS) */}
-              <div 
-                className="absolute w-full h-full border-r border-emerald-500/20 origin-center animate-spin-slow pointer-events-none"
-                style={{
-                  backgroundImage: "linear-gradient(45deg, rgba(16,185,129,0.15) 0%, transparent 50%)"
-                }}
-              ></div>
-
-              {/* Glowing Concentric Circles */}
-              <div className="absolute w-44 h-44 rounded-full border border-emerald-500/10"></div>
-              <div className="absolute w-28 h-28 rounded-full border border-emerald-500/15"></div>
-              <div className="absolute w-12 h-12 rounded-full border border-emerald-500/25"></div>
-
-              {/* Radar Targets (Pins) */}
-              <div className="absolute top-1/4 left-1/3 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-              <div className="absolute top-1/4 left-1/3 w-2.5 h-2.5 bg-red-500 rounded-full border border-white/20"></div>
-
-              <div className="absolute bottom-1/3 right-1/4 w-3.5 h-3.5 bg-orange-500 rounded-full animate-ping"></div>
-              <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-orange-500 rounded-full border border-white/20"></div>
-
-              <div className="absolute top-1/2 right-1/3 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-white/20"></div>
-
-              <div className="absolute bottom-12 left-1/4 w-2 h-2 bg-blue-500 rounded-full border border-white/20"></div>
-
-              {/* Center Coordinate Text */}
-              <div className="absolute bottom-3 left-3 bg-gray-900/90 border border-gray-800 rounded px-2 py-0.5 text-[8px] font-mono text-emerald-450 tracking-wider">
-                COIMBATORE: 11.0168° N, 76.9558° E
-              </div>
-
-              {/* Offline Warning Banner */}
-              <div className="absolute bg-gray-950/80 border border-gray-800 rounded-xl px-4 py-2 text-center backdrop-blur-md max-w-[200px] shadow-xl">
-                <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest block mb-1">
-                  Tactical Grid
-                </span>
-                <p className="text-[9px] text-gray-400 font-light leading-normal">
-                  Dynamic GIS integration ready. Live Leaflet monitors configured in route controls.
-                </p>
-              </div>
-            </div>
-            
-            <div className="mt-4 text-center">
-              <Link 
-                to="/admin/live-monitor" 
-                className="text-[10px] text-emerald-600 dark:text-emerald-450 hover:underline font-bold uppercase tracking-wider"
-              >
-                Open Fullscreen GIS Tracker
-              </Link>
+            <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-gray-250 dark:border-gray-800 rounded-2xl p-6 my-4 text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-8 h-8 text-gray-400 dark:text-gray-600 mb-2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.684A1.125 1.125 0 003 6.69v11.22c0 .425.24.815.622 1.006l4.875 2.437a1.125 1.125 0 001.006 0l5.375-2.688a1.125 1.125 0 011.006 0z" />
+              </svg>
+              <span className="text-xs font-bold text-slate-800 dark:text-gray-350">[ Map Placeholder ]</span>
+              <p className="text-[10px] text-gray-500 max-w-[200px] mt-1 leading-normal">
+                Real-time GIS mapping will be implemented in a future version.
+              </p>
             </div>
           </div>
 

@@ -10,6 +10,9 @@ import Citizens from "../pages/Citizens";
 import LiveMonitor from "../pages/LiveMonitor";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
+import AccessDenied from "../pages/AccessDenied/AccessDenied";
+import NotFound from "../pages/NotFound/NotFound";
+import Loading from "../pages/Loading/Loading";
 
 export default function AdminRoutes() {
   return (
@@ -25,8 +28,10 @@ export default function AdminRoutes() {
         <Route path="live-monitor" element={<LiveMonitor />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
-        {/* Wildcard fallback redirects to admin dashboard */}
-        <Route path="*" element={<Navigate to="dashboard" replace />} />
+        <Route path="access-denied" element={<AccessDenied />} />
+        <Route path="loading" element={<Loading />} />
+        {/* Wildcard fallback maps to the Admin 404 Page */}
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );
