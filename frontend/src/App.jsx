@@ -12,6 +12,7 @@ import MapPage from "./pages/MapPage";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Notifications from "./pages/Notifications";
+import AdminRoutes from "./admin/routes/AdminRoutes";
 
 function App() {
   // Handle edge cases: Expired Sessions
@@ -110,6 +111,9 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* Admin Portal Nested Routes */}
+      <Route path="/admin/*" element={<AdminRoutes />} />
     </Routes>
   );
 }
