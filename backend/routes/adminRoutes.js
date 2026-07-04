@@ -1,17 +1,20 @@
 import express from "express";
+import adminAuthRoutes from "./admin/adminAuthRoutes.js";
 import {
   getAllIssues,
   getIssueById,
   updateIssue,
 } from "../controllers/adminController.js";
-
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+import { protectAdmin, requireRole } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
-// 🔐 All routes protected + admin only
-router.get("/issues", protect, adminOnly, getAllIssues);
-router.get("/issues/:id", protect, adminOnly, getIssueById);
-router.patch("/issues/:id", protect, adminOnly, updateIssue);
+// 🔐 Mount Admin Auth APIs (/api/admin/login, /api/admin/profile)
+router.use("/", adminAuthRoutes);
+
+// 📋 Admin Issues Routes
+router.get("/issues", protectAdmin, requireRole("admin"), getAllIssues);
+router.get("/issues/:id", protectAdmin, requireRole("admin"), getIssueById);
+router.patch("/issues/:id", protectAdmin, requireRole("admin"), updateIssue);
 
 export default router;
