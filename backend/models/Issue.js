@@ -72,8 +72,13 @@ const issueSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔥 IMPORTANT: Index MUST be before model creation
+// 🔥 Performance Indexes for fast filtering and geospatial queries
 issueSchema.index({ location: "2dsphere" });
+issueSchema.index({ status: 1 });
+issueSchema.index({ priority: 1 });
+issueSchema.index({ category: 1 });
+issueSchema.index({ department: 1 });
+issueSchema.index({ createdAt: -1 });
 
 const Issue = mongoose.model("Issue", issueSchema);
 

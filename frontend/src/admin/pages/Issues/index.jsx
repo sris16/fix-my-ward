@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -13,6 +14,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 const API_BASE_URL = "http://localhost:5000/api/admin/issues";
 
 export default function Issues() {
+  const navigate = useNavigate();
   const { token } = useAdminAuth();
 
   // State
@@ -108,6 +110,9 @@ export default function Issues() {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   };
 
+  const startRecord = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+  const endRecord = Math.min(pagination.page * pagination.limit, pagination.total);
+
   return (
     <div className="space-y-6">
       
@@ -118,7 +123,7 @@ export default function Issues() {
         actions={
           <button
             onClick={fetchIssues}
-            className="px-4 py-2 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 text-slate-800 dark:text-white font-bold text-xs rounded-xl border border-gray-250 dark:border-gray-700 transition flex items-center gap-1.5"
+            className="px-4 py-2 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 text-slate-800 dark:text-white font-bold text-xs rounded-xl border border-gray-250 dark:border-gray-700 transition flex items-center gap-1.5 shadow-sm"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
@@ -261,7 +266,7 @@ export default function Issues() {
         <div className="flex justify-between items-center">
           <SectionTitle 
             title="Active Ticket Registry" 
-            subtitle={`Showing ${issues.length} of ${pagination.total} registered civic complaints`} 
+            subtitle={`Showing ${startRecord}-${endRecord} of ${pagination.total} registered civic complaints`} 
           />
         </div>
 
@@ -290,99 +295,170 @@ export default function Issues() {
             }
           />
         ) : (
-          <Table
-            headers={[
-              "ID",
-              "Thumbnail",
-              "Issue Title",
-              "Category",
-              "Citizen Name",
-              "Ward / Location",
-              "Priority",
-              "Department",
-              "Status",
-              "Upvotes",
-              "Date"
-            ]}
-            data={issues}
-            renderRow={(row) => (
-              <tr key={row._id} className="hover:bg-slate-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                
-                {/* ID */}
-                <td className="px-6 py-4 text-xs font-black text-slate-900 dark:text-white whitespace-nowrap">
-                  #FMW-{row._id.slice(-5).toUpperCase()}
-                </td>
+          <>
+            <Table
+              headers={[
+                "ID",
+                "Thumbnail",
+                "Issue Title",
+                "Category",
+                "Citizen Name",
+                "Ward / Location",
+                "Priority",
+                "Department",
+                "Status",
+                "Upvotes",
+                "Date",
+                "Action"
+              ]}
+              data={issues}
+              renderRow={(row) => (
+                <tr key={row._id} className="hover:bg-slate-50/50 dark:hover:bg-gray-800/20 transition-colors group">
+                  
+                  {/* ID */}
+                  <td className="px-6 py-4 text-xs font-black text-slate-900 dark:text-white whitespace-nowrap">
+                    <Link to={`/admin/issues/${row._id}`} className="hover:text-emerald-500 transition">
+                      #FMW-{row._id.slice(-5).toUpperCase()}
+                    </Link>
+                  </td>
 
-                {/* Thumbnail */}
-                <td className="px-6 py-4">
-                  {row.images && row.images.length > 0 ? (
-                    <img 
-                      src={row.images[0]} 
-                      alt={row.title} 
-                      className="w-10 h-10 object-cover rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shrink-0" 
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-gray-800 flex items-center justify-center text-slate-400 dark:text-gray-600 shrink-0 border border-gray-200 dark:border-gray-800">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                      </svg>
+                  {/* Thumbnail */}
+                  <td className="px-6 py-4">
+                    {row.images && row.images.length > 0 ? (
+                      <img 
+                        src={row.images[0]} 
+                        alt={row.title} 
+                        className="w-10 h-10 object-cover rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm shrink-0" 
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-gray-800 flex items-center justify-center text-slate-400 dark:text-gray-600 shrink-0 border border-gray-200 dark:border-gray-800">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                        </svg>
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Title */}
+                  <td className="px-6 py-4 min-w-[200px]">
+                    <Link to={`/admin/issues/${row._id}`} className="text-xs font-bold text-slate-800 dark:text-gray-150 leading-tight hover:text-emerald-500 transition block">
+                      {row.title}
+                    </Link>
+                    <div className="text-[10px] text-gray-500 font-light truncate max-w-xs mt-0.5">
+                      {row.description}
                     </div>
-                  )}
-                </td>
+                  </td>
 
-                {/* Title */}
-                <td className="px-6 py-4 min-w-[200px]">
-                  <div className="text-xs font-bold text-slate-800 dark:text-gray-150 leading-tight">
-                    {row.title}
-                  </div>
-                  <div className="text-[10px] text-gray-500 font-light truncate max-w-xs mt-0.5">
-                    {row.description}
-                  </div>
-                </td>
+                  {/* Category */}
+                  <td className="px-6 py-4 text-xs text-slate-650 dark:text-gray-300 font-medium whitespace-nowrap">
+                    {row.category}
+                  </td>
 
-                {/* Category */}
-                <td className="px-6 py-4 text-xs text-slate-650 dark:text-gray-300 font-medium whitespace-nowrap">
-                  {row.category}
-                </td>
+                  {/* Citizen Name */}
+                  <td className="px-6 py-4 text-xs font-semibold text-slate-800 dark:text-gray-200 whitespace-nowrap">
+                    {row.reportedBy?.name || "Civic Resident"}
+                  </td>
 
-                {/* Citizen Name */}
-                <td className="px-6 py-4 text-xs font-semibold text-slate-800 dark:text-gray-200 whitespace-nowrap">
-                  {row.reportedBy?.name || "Civic Resident"}
-                </td>
+                  {/* Ward / Location */}
+                  <td className="px-6 py-4 text-[10.5px] text-gray-500 dark:text-gray-400 font-light max-w-xs truncate">
+                    {row.locationText || "Coimbatore Ward Zone"}
+                  </td>
 
-                {/* Ward / Location */}
-                <td className="px-6 py-4 text-[10.5px] text-gray-500 dark:text-gray-400 font-light max-w-xs truncate">
-                  {row.locationText || "Coimbatore Ward Zone"}
-                </td>
+                  {/* Priority */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <PriorityBadge priority={row.priority} />
+                  </td>
 
-                {/* Priority */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <PriorityBadge priority={row.priority} />
-                </td>
+                  {/* Department */}
+                  <td className="px-6 py-4 text-xs text-slate-700 dark:text-gray-300 font-medium whitespace-nowrap">
+                    {row.department || "Unassigned"}
+                  </td>
 
-                {/* Department */}
-                <td className="px-6 py-4 text-xs text-slate-700 dark:text-gray-300 font-medium whitespace-nowrap">
-                  {row.department || "Unassigned"}
-                </td>
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <StatusBadge status={row.status} />
+                  </td>
 
-                {/* Status */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <StatusBadge status={row.status} />
-                </td>
+                  {/* Upvotes */}
+                  <td className="px-6 py-4 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                    ▲ {row.upvotes ? row.upvotes.length : 0}
+                  </td>
 
-                {/* Upvotes */}
-                <td className="px-6 py-4 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                  ▲ {row.upvotes ? row.upvotes.length : 0}
-                </td>
+                  {/* Date */}
+                  <td className="px-6 py-4 text-[10.5px] text-gray-500 font-medium whitespace-nowrap">
+                    {formatDate(row.createdAt)}
+                  </td>
 
-                {/* Date */}
-                <td className="px-6 py-4 text-[10.5px] text-gray-500 font-medium whitespace-nowrap">
-                  {formatDate(row.createdAt)}
-                </td>
+                  {/* Action */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => navigate(`/admin/issues/${row._id}`)}
+                      className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-emerald-500 hover:text-gray-950 text-slate-700 dark:text-gray-300 font-extrabold text-[11px] rounded-lg transition"
+                    >
+                      View Details
+                    </button>
+                  </td>
 
-              </tr>
-            )}
-          />
+                </tr>
+              )}
+            />
+
+            {/* 4. Pagination Controls Bar (Phase 6) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-gray-150 dark:border-gray-800/60">
+              
+              {/* Left: Records info & Rows Per Page */}
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span>
+                  Showing <strong className="text-slate-800 dark:text-gray-200">{startRecord}</strong> to{" "}
+                  <strong className="text-slate-800 dark:text-gray-200">{endRecord}</strong> of{" "}
+                  <strong className="text-slate-800 dark:text-gray-200">{pagination.total}</strong> tickets
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] font-bold">Rows per page:</label>
+                  <select
+                    value={pagination.limit}
+                    onChange={(e) => {
+                      setPagination((prev) => ({
+                        ...prev,
+                        limit: Number(e.target.value),
+                        page: 1,
+                      }));
+                    }}
+                    className="bg-slate-50 dark:bg-gray-950 border border-gray-250 dark:border-gray-800 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Right: Page Numbers & Prev / Next Buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none text-slate-800 dark:text-white font-bold text-xs rounded-xl transition"
+                >
+                  Previous
+                </button>
+
+                <span className="text-xs font-bold text-slate-700 dark:text-gray-300 px-2">
+                  Page {pagination.page} of {pagination.pages}
+                </span>
+
+                <button
+                  disabled={pagination.page >= pagination.pages}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
+                  className="px-3 py-1.5 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:pointer-events-none text-slate-800 dark:text-white font-bold text-xs rounded-xl transition"
+                >
+                  Next
+                </button>
+              </div>
+
+            </div>
+          </>
         )}
       </div>
 
