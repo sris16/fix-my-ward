@@ -1,25 +1,45 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../../hooks/useTheme";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 import { SunIcon, MoonIcon } from "../../../components/SvgIcon";
 
 export default function Login() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  
-  const [email, setEmail] = useState("admin@fixmyward.gov.in");
-  const [password, setPassword] = useState("••••••••••••");
-  const [loading, setLoading] = useState(false);
+  const { login, isAuthenticated, error: authError, setError } = useAdminAuth();
 
-  const handleSubmit = (e) => {
+  const [email, setEmail] = useState("admin@fixmyward.gov.in");
+  const [password, setPassword] = useState("adminpassword123");
+  const [loading, setLoading] = useState(false);
+  const [validationError, setValidationError] = useState("");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidationError("");
+    if (setError) setError("");
+
+    if (!email.trim() || !password.trim()) {
+      setValidationError("Please enter both email and password.");
+      return;
+    }
+
     setLoading(true);
-    // Simulated auth delay
-    setTimeout(() => {
-      setLoading(false);
-      navigate("/admin/dashboard");
-    }, 800);
+    const result = await login(email, password);
+    setLoading(false);
+
+    if (result.success) {
+      navigate("/admin/dashboard", { replace: true });
+    }
   };
+
+  const displayError = validationError || authError;
 
   return (
     <div 
@@ -65,6 +85,15 @@ export default function Login() {
           <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Command Login</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-light">Access the municipal oversight dashboard</p>
         </div>
+
+        {displayError && (
+          <div className="bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-400 p-3 rounded-2xl mb-4 text-xs font-semibold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-4 h-4 shrink-0">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            <span>{displayError}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

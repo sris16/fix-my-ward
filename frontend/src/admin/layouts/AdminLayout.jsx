@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useTheme } from "../../hooks/useTheme";
+import { useAdminAuth } from "../context/AdminAuthContext";
 import {
   DashboardIcon,
   IssuesIcon,
@@ -24,7 +25,8 @@ import {
 } from "../../components/SvgIcon";
 
 export default function AdminLayout() {
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme, toggleTheme } = useTheme();
+  const { admin, logout } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -73,22 +75,31 @@ export default function AdminLayout() {
     { name: "Settings", path: "/admin/settings", icon: SettingsIcon },
   ];
 
-  const mockAdminProfile = {
-    name: "Admin Commander",
-    email: "commander@fixmyward.gov",
-    role: "System Admin",
-    avatarInitial: "AC"
+  const adminName = admin?.name || "Admin Officer";
+  const adminEmail = admin?.email || "admin@fixmyward.gov.in";
+  const adminRole = admin?.role ? admin.role.toUpperCase() : "ADMIN";
+  const adminDept = admin?.department || "Municipal Operations";
+
+  const getInitials = (name) => {
+    if (!name) return "AD";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   };
 
+  const avatarInitials = getInitials(adminName);
+
   const handleLogout = () => {
-    // Clear admin-related sessions if any, and redirect to admin login
-    navigate("/admin/login");
+    logout();
+    navigate("/admin/login", { replace: true });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-slate-800 dark:text-white flex transition-colors duration-200">
       
-      {/* Background Radial Lights (Linear/Vercel vibe) */}
+      {/* Background Radial Lights */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-500/[0.02] dark:bg-emerald-500/[0.03] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[120px] pointer-events-none z-0"></div>
       <div className="absolute bottom-10 right-10 w-[600px] h-[600px] bg-teal-500/[0.015] dark:bg-teal-500/[0.02] rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[150px] pointer-events-none z-0"></div>
 
@@ -165,12 +176,12 @@ export default function AdminLayout() {
         <div className="p-3 border-t border-gray-200 dark:border-gray-800/80 bg-slate-50/50 dark:bg-gray-900/40 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 flex items-center justify-center text-gray-950 font-black text-xs shadow-md shrink-0">
-              {mockAdminProfile.avatarInitial}
+              {avatarInitials}
             </div>
             {!isSidebarCollapsed && (
               <div className="min-w-0 flex-1">
-                <h4 className="text-[11px] font-extrabold text-slate-800 dark:text-white truncate">{mockAdminProfile.name}</h4>
-                <p className="text-[9px] text-gray-500 truncate">{mockAdminProfile.email}</p>
+                <h4 className="text-[11px] font-extrabold text-slate-800 dark:text-white truncate">{adminName}</h4>
+                <p className="text-[9px] text-gray-500 truncate">{adminDept}</p>
               </div>
             )}
           </div>
@@ -207,7 +218,7 @@ export default function AdminLayout() {
 
             {/* Quick Location / Context details */}
             <span className="hidden md:inline-block text-[11px] bg-slate-100 dark:bg-gray-800/60 text-slate-600 dark:text-gray-300 border border-slate-200/50 dark:border-gray-800 px-2.5 py-1 rounded-lg font-bold uppercase tracking-wider">
-              Coimbatore Command Center
+              Coimbatore Command Center &middot; {adminRole}
             </span>
           </div>
 
@@ -265,14 +276,6 @@ export default function AdminLayout() {
                       <p className="text-[11px] font-medium leading-normal">Pothole near Signal reported with 45 upvotes.</p>
                       <span className="text-[9px] text-gray-500 block mt-1">12 minutes ago</span>
                     </div>
-                    <div className="p-2 bg-slate-50 dark:bg-gray-950/40 rounded-xl border border-transparent hover:border-orange-500/20 transition">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-                        <span className="text-[10px] font-black text-orange-550 dark:text-orange-400 uppercase tracking-wide">High Water</span>
-                      </div>
-                      <p className="text-[11px] font-medium leading-normal">Water pipe leak reported near Race Course.</p>
-                      <span className="text-[9px] text-gray-500 block mt-1">2 hours ago</span>
-                    </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 text-center">
                     <Link
@@ -293,15 +296,18 @@ export default function AdminLayout() {
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
                 className="w-9 h-9 rounded-xl overflow-hidden border border-slate-200 dark:border-gray-800 flex items-center justify-center bg-gradient-to-tr from-emerald-500 to-teal-500 text-gray-950 font-black text-xs hover:opacity-90 transition shadow-sm"
               >
-                {mockAdminProfile.avatarInitial}
+                {avatarInitials}
               </button>
 
               {/* Profile Dropdown Card */}
               {showProfileDropdown && (
                 <div className="absolute right-0 mt-2.5 w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl z-50 p-3 text-left animate-scale-in">
                   <div className="px-2 py-1.5 border-b border-gray-150 dark:border-gray-800/80 mb-2">
-                    <p className="text-xs font-black text-slate-900 dark:text-white leading-tight">{mockAdminProfile.name}</p>
-                    <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">{mockAdminProfile.email}</p>
+                    <p className="text-xs font-black text-slate-900 dark:text-white leading-tight">{adminName}</p>
+                    <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">{adminEmail}</p>
+                    <span className="inline-block mt-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                      {adminDept}
+                    </span>
                   </div>
                   <Link
                     to="/admin/settings"

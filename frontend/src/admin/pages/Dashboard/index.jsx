@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAdminAuth } from "../../context/AdminAuthContext";
 import { dashboardStats } from "../../data/dashboard";
 import { dummyIssues } from "../../data/issues";
 import { dummyDepartments } from "../../data/departments";
@@ -11,15 +12,26 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 import { PriorityBadge } from "../../components/ui/PriorityBadge";
 
 export default function Dashboard() {
+  const { admin } = useAdminAuth();
   const [issuesData] = useState(dummyIssues.slice(0, 4));
+
+  const formatLastLogin = (lastLogin) => {
+    if (!lastLogin) return "First Session";
+    try {
+      const date = new Date(lastLogin);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " (" + date.toLocaleDateString() + ")";
+    } catch (e) {
+      return "Active Now";
+    }
+  };
 
   return (
     <div className="space-y-6">
       
       {/* 1. Page Header */}
       <PageHeader 
-        title="Command Operations" 
-        subtitle="Real-time municipal complaints monitoring and dispatch control (Version 1)"
+        title={`Welcome, ${admin?.name || "Admin Commander"}`} 
+        subtitle={`${admin?.department || "Municipal Operations"} • Role: ${(admin?.role || "Admin").toUpperCase()} • Last Active: ${formatLastLogin(admin?.lastLogin)}`}
         actions={
           <div className="flex gap-2.5">
             <Link 
@@ -46,13 +58,13 @@ export default function Dashboard() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/[0.01] dark:bg-emerald-500/[0.02] rounded-full filter blur-3xl pointer-events-none"></div>
         <div className="space-y-1 relative z-10">
           <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-455 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/20">
-            System Online - V1 Foundation
+            Authenticated Session &middot; {admin?.designation || "Municipal Officer"}
           </span>
           <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight pt-1">
             Ward Dispatch Status: Optimal
           </h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 font-light leading-relaxed max-w-xl">
-            Currently tracking 1,248 complaints across Coimbatore. Average resolution efficiency is 92.4% with 812 total resolved cases.
+            Currently tracking civic reports across Coimbatore. Authenticated as <span className="font-semibold text-slate-800 dark:text-gray-200">{admin?.email}</span> under <span className="font-semibold text-slate-800 dark:text-gray-200">{admin?.department}</span>.
           </p>
         </div>
         <div className="flex gap-3 shrink-0 relative z-10">
@@ -61,7 +73,7 @@ export default function Dashboard() {
             <p className="text-[9px] text-gray-500 uppercase font-black mt-0.5">Critical Cases</p>
           </div>
           <div className="bg-white/80 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800/80 rounded-2xl px-4 py-2 text-center shadow-sm">
-            <span className="text-lg font-black text-emerald-650 dark:text-emerald-450">{dashboardStats.averageResolutionTime}</span>
+            <span className="text-lg font-black text-emerald-650 dark:text-emerald-455">{dashboardStats.averageResolutionTime}</span>
             <p className="text-[9px] text-gray-500 uppercase font-black mt-0.5">Resolution SLA</p>
           </div>
         </div>
@@ -228,7 +240,7 @@ export default function Dashboard() {
               </svg>
               <span className="text-xs font-bold text-slate-800 dark:text-gray-350">[ Chart Placeholder ]</span>
               <p className="text-[10px] text-gray-500 max-w-[200px] mt-1 leading-normal">
-                Chart integration will be implemented in Version 2.
+                Analytics telemetry charts will be connected in Version 3.
               </p>
             </div>
           </div>
