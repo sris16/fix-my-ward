@@ -456,7 +456,16 @@ export default function IssueDetails() {
               </div>
               <div>
                 <span className="text-[10px] text-gray-500 font-bold uppercase block">Assigned Department</span>
-                <span className="font-black text-slate-800 dark:text-white">{issue.department || "Unassigned"}</span>
+                {issue.department ? (
+                  <Link
+                    to={`/admin/departments/${encodeURIComponent(issue.department)}`}
+                    className="font-black text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    {issue.department} &rarr;
+                  </Link>
+                ) : (
+                  <span className="font-black text-slate-800 dark:text-white">Unassigned</span>
+                )}
               </div>
               <div>
                 <span className="text-[10px] text-gray-500 font-bold uppercase block">Assigned Officer</span>

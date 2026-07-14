@@ -282,7 +282,15 @@ export default function Dashboard() {
 
           {/* Department Overview (Live Data) */}
           <div className="space-y-4">
-            <SectionTitle title="Department Oversight" subtitle="Operational allocation and resolution efficiency indices" />
+            <div className="flex justify-between items-center">
+              <SectionTitle title="Department Oversight" subtitle="Operational allocation and resolution efficiency indices" />
+              <Link 
+                to="/admin/departments" 
+                className="text-[11px] text-emerald-600 dark:text-emerald-450 hover:underline font-black uppercase tracking-wider"
+              >
+                View Divisions Roster &rarr;
+              </Link>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {departmentCounts.length === 0 ? (
                 <div className="col-span-2 p-6 bg-white dark:bg-gray-900/60 border border-gray-250 dark:border-gray-800 rounded-2xl text-center text-xs text-gray-500">
@@ -291,12 +299,13 @@ export default function Dashboard() {
               ) : (
                 departmentCounts.map((dept, index) => (
                   <div 
-                    key={index} 
-                    className="p-5 bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-2xl shadow-sm flex flex-col justify-between hover:border-slate-350 dark:hover:border-gray-700 transition"
+                    key={index}
+                    onClick={() => window.location.href = `/admin/departments/${encodeURIComponent(dept.name)}`}
+                    className="p-5 bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-2xl shadow-sm flex flex-col justify-between hover:border-emerald-500 dark:hover:border-emerald-500/80 hover:shadow-md transition cursor-pointer group"
                   >
                     <div className="flex justify-between items-start">
                       <div className="min-w-0 pr-2">
-                        <h4 className="text-xs font-black text-slate-800 dark:text-white truncate">{dept.name}</h4>
+                        <h4 className="text-xs font-black text-slate-800 dark:text-white group-hover:text-emerald-500 transition-colors truncate">{dept.name}</h4>
                         <p className="text-[10px] text-gray-500 font-light mt-0.5">Municipal Allocation</p>
                       </div>
                       <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
@@ -307,7 +316,7 @@ export default function Dashboard() {
                         {dept.efficiency}% SLA
                       </span>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-gray-150 dark:border-gray-800/60 grid grid-cols-2 gap-2 text-[10.5px] text-gray-500">
+                    <div className="mt-4 pt-3 border-t border-gray-150 dark:border-gray-800/60 flex items-center justify-between text-[10.5px] text-gray-500">
                       <div>
                         <span>Assigned Cases: </span>
                         <strong className="text-slate-800 dark:text-gray-300 font-extrabold">{dept.totalIssues}</strong>

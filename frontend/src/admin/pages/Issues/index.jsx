@@ -370,8 +370,20 @@ export default function Issues() {
                   </td>
 
                   {/* Department */}
-                  <td className="px-6 py-4 text-xs text-slate-700 dark:text-gray-300 font-medium whitespace-nowrap">
-                    {row.department || "Unassigned"}
+                  <td className="px-6 py-4 text-xs font-medium whitespace-nowrap">
+                    {row.department ? (
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/admin/departments/${encodeURIComponent(row.department)}`;
+                        }}
+                        className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer inline-flex items-center gap-1"
+                      >
+                        {row.department} &rarr;
+                      </span>
+                    ) : (
+                      <span className="text-slate-700 dark:text-gray-300">Unassigned</span>
+                    )}
                   </td>
 
                   {/* Status */}
