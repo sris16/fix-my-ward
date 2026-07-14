@@ -3,6 +3,7 @@ import adminAuthRoutes from "./admin/adminAuthRoutes.js";
 import adminIssueRoutes from "./admin/adminIssueRoutes.js";
 import adminDashboardRoutes from "./admin/adminDashboardRoutes.js";
 import adminDepartmentRoutes from "./admin/adminDepartmentRoutes.js";
+import adminAnalyticsRoutes from "./admin/adminAnalyticsRoutes.js";
 
 const router = express.Router();
 
@@ -17,5 +18,8 @@ router.use("/", adminDashboardRoutes);
 
 // 🏢 Mount Admin Department Workstation APIs (/api/admin/departments, /api/admin/departments/:departmentName)
 router.use("/", adminDepartmentRoutes);
+
+// 📈 Mount Admin Executive Analytics & Intelligence APIs (/api/admin/analytics/overview, /categories, /departments, /trends, /distributions)
+router.use("/", adminAnalyticsRoutes);
 
 export default router;
