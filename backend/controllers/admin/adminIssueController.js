@@ -6,6 +6,9 @@ import {
   assignAdminIssueService,
   updateAdminIssuePriorityService,
   updateAdminIssueStatusService,
+  addAdminIssueNoteService,
+  getAdminIssueNotesService,
+  getAdminIssueTimelineService,
 } from "../../services/admin/adminIssueService.js";
 
 /**
@@ -173,6 +176,71 @@ export const updateAdminIssueStatus = async (req, res) => {
     return res.status(statusCode).json({
       success: false,
       message: error.message || "Failed to update status",
+    });
+  }
+};
+
+/**
+ * @desc    Phase 6: Add internal admin note
+ * @route   POST /api/admin/issues/:id/notes
+ * @access  Private (Admin Only)
+ */
+export const addAdminIssueNote = async (req, res) => {
+  try {
+    const { note } = req.body;
+    const noteRecord = await addAdminIssueNoteService(req.params.id, req.admin._id, note);
+    return res.status(201).json({
+      success: true,
+      message: "Note added successfully",
+      note: noteRecord,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to add internal note",
+    });
+  }
+};
+
+/**
+ * @desc    Phase 6: Get all internal admin notes for an issue
+ * @route   GET /api/admin/issues/:id/notes
+ * @access  Private (Admin Only)
+ */
+export const getAdminIssueNotes = async (req, res) => {
+  try {
+    const notes = await getAdminIssueNotesService(req.params.id);
+    return res.status(200).json({
+      success: true,
+      notes,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to retrieve notes",
+    });
+  }
+};
+
+/**
+ * @desc    Phase 7: Get complete lifecycle timeline for an issue
+ * @route   GET /api/admin/issues/:id/timeline
+ * @access  Private (Admin Only)
+ */
+export const getAdminIssueTimeline = async (req, res) => {
+  try {
+    const timeline = await getAdminIssueTimelineService(req.params.id);
+    return res.status(200).json({
+      success: true,
+      timeline,
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to retrieve issue timeline",
     });
   }
 };

@@ -7,6 +7,9 @@ import {
   assignAdminIssue,
   updateAdminIssuePriority,
   updateAdminIssueStatus,
+  addAdminIssueNote,
+  getAdminIssueNotes,
+  getAdminIssueTimeline,
 } from "../../controllers/admin/adminIssueController.js";
 import { protectAdmin, requireRole } from "../../middleware/adminAuth.js";
 
@@ -28,5 +31,12 @@ router.patch("/issues/:id/priority", protectAdmin, requireRole("admin"), updateA
 
 // Phase 5: Status Workflow
 router.patch("/issues/:id/status", protectAdmin, requireRole("admin"), updateAdminIssueStatus);
+
+// Phase 6: Admin Internal Notes
+router.post("/issues/:id/notes", protectAdmin, requireRole("admin"), addAdminIssueNote);
+router.get("/issues/:id/notes", protectAdmin, requireRole("admin"), getAdminIssueNotes);
+
+// Phase 7: Issue Lifecycle Timeline
+router.get("/issues/:id/timeline", protectAdmin, requireRole("admin"), getAdminIssueTimeline);
 
 export default router;

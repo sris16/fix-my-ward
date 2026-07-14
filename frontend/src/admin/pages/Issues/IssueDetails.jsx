@@ -13,7 +13,7 @@ const API_BASE_URL = "http://localhost:5000/api/admin/issues";
 export default function IssueDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAdminAuth();
+  const { token, admin } = useAdminAuth();
 
   const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +27,12 @@ export default function IssueDetails() {
   // Form State for Assignment Widget (Phase 3)
   const [assignDept, setAssignDept] = useState("");
   const [assignOfficer, setAssignOfficer] = useState("");
+
+  // Phase 6 & 7 State: Admin Notes & Lifecycle Timeline
+  const [notes, setNotes] = useState([]);
+  const [timeline, setTimeline] = useState([]);
+  const [newNoteInput, setNewNoteInput] = useState("");
+  const [noteLoading, setNoteLoading] = useState(false);
 
   // Modal State for confirmations
   const [modal, setModal] = useState({
@@ -51,17 +57,19 @@ export default function IssueDetails() {
     setNotFound(false);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const [issueRes, notesRes, timelineRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/${id}/notes`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: { notes: [] } })),
+        axios.get(`${API_BASE_URL}/${id}/timeline`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => ({ data: { timeline: [] } })),
+      ]);
 
-      if (response.data.success) {
-        const fetchedIssue = response.data.issue;
+      if (issueRes.data.success) {
+        const fetchedIssue = issueRes.data.issue;
         setIssue(fetchedIssue);
         setAssignDept(fetchedIssue.department || "");
         setAssignOfficer(fetchedIssue.assignedOfficer || "");
+        setNotes(notesRes.data?.notes || []);
+        setTimeline(timelineRes.data?.timeline || []);
       } else {
         setError("Failed to load issue details");
       }
@@ -74,6 +82,27 @@ export default function IssueDetails() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshTelemetry = async () => {
+    if (!token || !id) return;
+    try {
+      const [issueRes, notesRes, timelineRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/${id}/notes`, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(`${API_BASE_URL}/${id}/timeline`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (issueRes.data.success) {
+        const fetchedIssue = issueRes.data.issue;
+        setIssue(fetchedIssue);
+        setAssignDept(fetchedIssue.department || "");
+        setAssignOfficer(fetchedIssue.assignedOfficer || "");
+      }
+      setNotes(notesRes.data?.notes || []);
+      setTimeline(timelineRes.data?.timeline || []);
+    } catch (e) {
+      console.error("Telemetry refresh error:", e);
     }
   };
 
@@ -91,6 +120,32 @@ export default function IssueDetails() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Phase 6: Post internal admin note
+  const handleAddNote = async (e) => {
+    e.preventDefault();
+    if (!newNoteInput.trim() || !token || !issue) return;
+    setNoteLoading(true);
+
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/${issue._id}/notes`,
+        { note: newNoteInput.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        setNewNoteInput("");
+        showToast("Internal note posted to audit trail", "success");
+        await refreshTelemetry();
+      }
+    } catch (err) {
+      console.error("Failed to post internal note:", err);
+      showToast(err.response?.data?.message || "Failed to add internal note", "error");
+    } finally {
+      setNoteLoading(false);
+    }
   };
 
   // Open confirmation modal
@@ -171,12 +226,9 @@ export default function IssueDetails() {
       });
 
       if (response.data.success) {
-        const updated = response.data.issue;
-        setIssue(updated);
-        setAssignDept(updated.department || "");
-        setAssignOfficer(updated.assignedOfficer || "");
         showToast(response.data.message || "Operation completed successfully", "success");
         closeModal();
+        await refreshTelemetry();
       }
     } catch (err) {
       console.error("Operation failed:", err);
@@ -243,6 +295,27 @@ export default function IssueDetails() {
   // State guards for Phase 2 & Phase 5 buttons
   const canVerify = issue.status === "Pending";
   const canReject = issue.status !== "Rejected" && issue.status !== "Resolved";
+
+  // Helper icon for timeline action types
+  const getTimelineBadge = (action) => {
+    switch (action) {
+      case "VERIFY_ISSUE":
+        return { text: "VERIFIED", color: "bg-emerald-500 text-gray-950" };
+      case "ASSIGN_DEPARTMENT":
+        return { text: "DISPATCHED", color: "bg-teal-500 text-gray-950" };
+      case "CHANGE_PRIORITY":
+        return { text: "TRIAGED", color: "bg-amber-500 text-gray-950" };
+      case "CHANGE_STATUS":
+        return { text: "STATUS CHANGE", color: "bg-blue-500 text-white" };
+      case "ADD_NOTE":
+        return { text: "NOTE ADDED", color: "bg-purple-500 text-white" };
+      case "REJECT_ISSUE":
+        return { text: "REJECTED", color: "bg-red-500 text-white" };
+      case "TICKET_CREATED":
+      default:
+        return { text: "CREATED", color: "bg-slate-700 text-white" };
+    }
+  };
 
   return (
     <div className="space-y-6 relative">
@@ -365,7 +438,7 @@ export default function IssueDetails() {
       {/* 2. Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left 2 Columns: Issue Info & Gallery */}
+        {/* Left 2 Columns: Issue Info, Gallery & Internal Notes */}
         <div className="lg:col-span-2 space-y-6">
           
           {/* Issue Description Card */}
@@ -431,6 +504,79 @@ export default function IssueDetails() {
             )}
           </div>
 
+          {/* Phase 6: Internal Admin Notes Workstation */}
+          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-3xl p-6 shadow-sm space-y-5">
+            <div className="flex justify-between items-center">
+              <SectionTitle title="Admin Internal Notes" subtitle="Internal triage remarks & operational logs" />
+              <span className="text-[10px] font-black uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2.5 py-1 rounded-lg">
+                🔒 Internal Only • Not Visible to Citizens
+              </span>
+            </div>
+
+            {/* Note Input Form */}
+            <form onSubmit={handleAddNote} className="space-y-3 bg-slate-50 dark:bg-gray-950 p-4 rounded-2xl border border-gray-200 dark:border-gray-800">
+              <textarea
+                rows={3}
+                value={newNoteInput}
+                onChange={(e) => setNewNoteInput(e.target.value)}
+                placeholder="Enter internal triage observations, field updates, or department coordination notes here..."
+                className="w-full bg-white dark:bg-gray-900 border border-gray-250 dark:border-gray-800 rounded-xl p-3 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500 placeholder-slate-400 resize-none"
+              />
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-[10px] text-gray-500">
+                  Posting as <strong>{admin?.name || "Admin Commander"}</strong> ({admin?.designation || "Officer"})
+                </span>
+                <button
+                  type="submit"
+                  disabled={!newNoteInput.trim() || noteLoading}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition shadow-sm ${
+                    newNoteInput.trim()
+                      ? "bg-emerald-500 hover:bg-emerald-600 text-gray-950"
+                      : "bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  {noteLoading ? "Posting..." : "Post Internal Note"}
+                </button>
+              </div>
+            </form>
+
+            {/* Notes List (Newest First) */}
+            <div className="space-y-3 pt-2">
+              {notes.length === 0 ? (
+                <div className="p-6 border border-dashed border-gray-250 dark:border-gray-800 rounded-2xl text-center text-xs text-gray-500 font-light">
+                  No internal notes recorded yet for this ticket. Post the first triage observation above.
+                </div>
+              ) : (
+                notes.map((noteItem) => (
+                  <div
+                    key={noteItem._id}
+                    className="p-4 bg-slate-50/70 dark:bg-gray-950/60 border border-gray-200/80 dark:border-gray-800 rounded-2xl space-y-2"
+                  >
+                    <div className="flex justify-between items-start text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center font-black text-[10px]">
+                          {noteItem.admin?.name ? noteItem.admin.name.slice(0, 2).toUpperCase() : "AD"}
+                        </div>
+                        <span className="font-extrabold text-slate-800 dark:text-gray-200">
+                          {noteItem.admin?.name || "Admin Officer"}
+                        </span>
+                        <span className="text-[10px] text-gray-500">
+                          ({noteItem.admin?.designation || "Administrative Command"})
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        {formatDate(noteItem.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-700 dark:text-gray-300 pl-8 font-normal whitespace-pre-line">
+                      {noteItem.note}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           {/* Interactive Map Placeholder */}
           <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-3xl p-6 shadow-sm space-y-4">
             <SectionTitle title="Location & GIS Coordinates" subtitle="Geospatial details" />
@@ -453,7 +599,7 @@ export default function IssueDetails() {
 
         </div>
 
-        {/* Right 1 Column: Citizen Info, Operational Assignment, Placeholders for Timeline & Admin Notes */}
+        {/* Right 1 Column: Citizen Info, Operational Assignment & Phase 7 Timeline */}
         <div className="space-y-6">
           
           {/* Phase 3: Officer Assignment Triage Card */}
@@ -527,31 +673,51 @@ export default function IssueDetails() {
             </div>
           </div>
 
-          {/* Timeline Placeholder (Will be replaced in Phase 7) */}
+          {/* Phase 7: Issue Lifecycle Timeline Widget */}
           <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-3xl p-6 shadow-sm space-y-4">
-            <SectionTitle title="Lifecycle Timeline" subtitle="Audit trail history" />
+            <SectionTitle title="Municipal Audit Timeline" subtitle="Complete chronological activity stream" />
             
-            <div className="space-y-3 relative before:absolute before:inset-0 before:left-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-800 pl-6 text-xs">
-              <div className="relative">
-                <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
-                <span className="font-extrabold text-slate-800 dark:text-white">Ticket Created</span>
-                <p className="text-[10px] text-gray-500">{formatDate(issue.createdAt)}</p>
-              </div>
+            <div className="space-y-4 relative before:absolute before:inset-0 before:left-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-800 pl-6 pt-1 text-xs">
+              {timeline.length === 0 ? (
+                <div className="text-[11px] text-gray-500 font-light">Loading timeline entries...</div>
+              ) : (
+                timeline.map((item, idx) => {
+                  const badge = getTimelineBadge(item.action);
+                  return (
+                    <div key={item._id || idx} className="relative group">
+                      <span className={`absolute -left-6 top-0.5 w-2.5 h-2.5 rounded-full ring-4 ring-emerald-500/10 ${
+                        idx === 0 ? "bg-emerald-500 ring-emerald-500/30" : "bg-slate-400 dark:bg-gray-600"
+                      }`}></span>
+                      
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${badge.color}`}>
+                          {badge.text}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {formatDate(item.createdAt)}
+                        </span>
+                      </div>
 
-              <div className="relative opacity-60">
-                <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-                <span className="font-bold text-slate-700 dark:text-gray-300">Verification & Triage</span>
-                <p className="text-[10px] text-gray-500">[ Timeline Placeholder - Phase 7 ]</p>
-              </div>
-            </div>
-          </div>
+                      <div className="mt-1 font-extrabold text-slate-800 dark:text-gray-150 text-xs">
+                        {item.action === "VERIFY_ISSUE" && "Verified by Municipal Triage"}
+                        {item.action === "ASSIGN_DEPARTMENT" && `Assigned to ${item.newValue?.department || "Department"}`}
+                        {item.action === "CHANGE_PRIORITY" && `Priority Triaged to ${item.newValue}`}
+                        {item.action === "CHANGE_STATUS" && `Status Changed to ${item.newValue?.status || item.newValue}`}
+                        {item.action === "ADD_NOTE" && "Internal Admin Observation Recorded"}
+                        {item.action === "REJECT_ISSUE" && "Ticket Rejected by Triage Command"}
+                        {item.action === "TICKET_CREATED" && "Ticket Submitted by Citizen"}
+                      </div>
 
-          {/* Admin Notes Placeholder (Will be replaced in Phase 6) */}
-          <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-3xl p-6 shadow-sm space-y-3">
-            <SectionTitle title="Admin Internal Notes" subtitle="Internal comments" />
-            <div className="p-4 border border-dashed border-gray-250 dark:border-gray-800 rounded-2xl text-center text-xs text-gray-500">
-              [ Admin Notes Placeholder - Phase 6 ]<br />
-              <span className="text-[10px]">Internal notes will be enabled in Phase 6.</span>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 font-normal leading-relaxed">
+                        {item.note && <span className="block italic">"{item.note}"</span>}
+                        <span className="block text-[10px] text-gray-400 mt-0.5">
+                          Operator: <strong>{item.admin?.name || "System Command"}</strong> ({item.admin?.designation || item.admin?.role || "Staff"})
+                        </span>
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

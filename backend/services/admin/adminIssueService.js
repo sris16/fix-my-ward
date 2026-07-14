@@ -39,20 +39,16 @@ export const getAdminIssuesService = async (queryParams) => {
   const limitNum = Math.max(1, parseInt(limit, 10) || 10);
   const skip = (pageNum - 1) * limitNum;
 
-  // Build MongoDB query filter
   const query = {};
 
-  // 1. Status Filter
   if (status && status !== "All") {
     query.status = status;
   }
 
-  // 2. Priority Filter
   if (priority && priority !== "All") {
     query.priority = priority;
   }
 
-  // 3. Category Filter
   if (category && category !== "All") {
     let mappedCategory = category;
     if (category === "Road Damage") mappedCategory = "Road";
@@ -63,12 +59,10 @@ export const getAdminIssuesService = async (queryParams) => {
     query.category = { $regex: new RegExp(mappedCategory, "i") };
   }
 
-  // 4. Department Filter
   if (department && department !== "All") {
     query.department = { $regex: new RegExp(department, "i") };
   }
 
-  // 5. Global Search Filter
   if (search && search.trim() !== "") {
     const searchRegex = new RegExp(search.trim(), "i");
     query.$or = [
@@ -81,8 +75,7 @@ export const getAdminIssuesService = async (queryParams) => {
     ];
   }
 
-  // 6. Build Sorting Option
-  let sortOption = { createdAt: -1 }; // default: newest
+  let sortOption = { createdAt: -1 };
 
   switch (sortBy) {
     case "oldest":
@@ -103,7 +96,6 @@ export const getAdminIssuesService = async (queryParams) => {
       break;
   }
 
-  // Execute Count & Query in parallel
   const total = await Issue.countDocuments(query);
   let issues = await Issue.find(query)
     .populate("reportedBy", "name email")
@@ -111,7 +103,6 @@ export const getAdminIssuesService = async (queryParams) => {
     .skip(skip)
     .limit(limitNum);
 
-  // In-memory sorting for fields like upvotes count or priority weights if requested
   if (sortBy === "most_upvoted") {
     issues.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0));
   } else if (sortBy === "highest_priority") {
@@ -341,7 +332,6 @@ export const updateAdminIssueStatusService = async (issueId, adminId, { status, 
     throw error;
   }
 
-  // State transitions checks
   if (issue.status === "Resolved" && status === "Pending") {
     const error = new Error("Invalid transition: Resolved issue cannot become Pending");
     error.statusCode = 400;
@@ -387,4 +377,92 @@ export const updateAdminIssueStatusService = async (issueId, adminId, { status, 
   });
 
   return issue;
+};
+
+/**
+ * Phase 6: Add internal admin note (Not visible to citizens)
+ */
+export const addAdminIssueNoteService = async (issueId, adminId, note) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!note || !note.trim()) {
+    const error = new Error("Note content cannot be empty");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const newNoteRecord = await IssueHistory.create({
+    issue: issue._id,
+    admin: adminId,
+    action: "ADD_NOTE",
+    note: note.trim(),
+  });
+
+  return await newNoteRecord.populate("admin", "name email role designation avatar");
+};
+
+/**
+ * Phase 6: Get all internal admin notes for an issue (Newest first)
+ */
+export const getAdminIssueNotesService = async (issueId) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const notes = await IssueHistory.find({ issue: issue._id, action: "ADD_NOTE" })
+    .populate("admin", "name email role designation avatar")
+    .sort({ createdAt: -1 });
+
+  return notes;
+};
+
+/**
+ * Phase 7: Get complete issue lifecycle timeline (Audit history + creation)
+ */
+export const getAdminIssueTimelineService = async (issueId) => {
+  const issue = await Issue.findById(issueId).populate("reportedBy", "name email");
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const history = await IssueHistory.find({ issue: issue._id })
+    .populate("admin", "name email role designation avatar")
+    .sort({ createdAt: -1 });
+
+  // Ensure creation event is represented cleanly in the chronological timeline
+  const hasCreationEvent = history.some((item) => item.action === "TICKET_CREATED");
+  const timeline = [...history];
+
+  if (!hasCreationEvent) {
+    timeline.push({
+      _id: `${issue._id}_created`,
+      issue: issue._id,
+      action: "TICKET_CREATED",
+      oldValue: null,
+      newValue: { status: "Pending", priority: issue.priority },
+      note: issue.description,
+      createdAt: issue.createdAt,
+      admin: {
+        name: issue.reportedBy?.name || "Citizen Reporter",
+        email: issue.reportedBy?.email || "Resident",
+        role: "Citizen",
+        designation: "Civic Reporter",
+      },
+    });
+  }
+
+  // Sort newest first
+  timeline.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return timeline;
 };
