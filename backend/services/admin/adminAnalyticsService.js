@@ -334,3 +334,63 @@ export const getAnalyticsDistributionsService = async () => {
     priorityDistribution
   };
 };
+
+/**
+ * Phase 9: Get filtered reports for CSV/PDF Export and tabular inspection
+ */
+export const getAnalyticsReportsService = async (filters = {}) => {
+  const query = {};
+
+  if (filters.department && filters.department !== "ALL") {
+    query.department = filters.department === "Unassigned" ? { $in: ["", null] } : filters.department;
+  }
+  if (filters.category && filters.category !== "ALL") {
+    query.category = filters.category;
+  }
+  if (filters.priority && filters.priority !== "ALL") {
+    query.priority = filters.priority;
+  }
+  if (filters.status && filters.status !== "ALL") {
+    query.status = filters.status;
+  }
+  if (filters.startDate || filters.endDate) {
+    query.createdAt = {};
+    if (filters.startDate) query.createdAt.$gte = new Date(filters.startDate);
+    if (filters.endDate) query.createdAt.$lte = new Date(filters.endDate);
+  }
+
+  const reports = await Issue.find(query)
+    .populate("reportedBy", "name email phone")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const totalCount = reports.length;
+  const resolvedCount = reports.filter((r) => r.status === "Resolved").length;
+  const criticalCount = reports.filter((r) => r.priority === "Critical").length;
+  const resMetrics = computeResolutionMetrics(reports.filter((r) => r.status === "Resolved"));
+
+  return {
+    summary: {
+      totalCount,
+      resolvedCount,
+      criticalCount,
+      averageResolutionTime: resMetrics.string,
+      averageResolutionHours: resMetrics.hours
+    },
+    reports: reports.map((r) => ({
+      id: r._id,
+      ticketId: `#FMW-${r._id.toString().slice(-6).toUpperCase()}`,
+      title: r.title || "Untitled Civic Complaint",
+      description: r.description || "",
+      category: r.category || "Other",
+      department: r.department || "Unassigned",
+      priority: r.priority || "Low",
+      status: r.status || "Pending",
+      assignedOfficer: r.assignedOfficer || "Unassigned",
+      reportedBy: r.reportedBy?.name || "Resident",
+      locationText: r.locationText || "Coimbatore Zone",
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    }))
+  };
+};

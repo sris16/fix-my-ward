@@ -4,7 +4,8 @@ import {
   getAnalyticsCategories,
   getAnalyticsDepartments,
   getAnalyticsTrends,
-  getAnalyticsDistributions
+  getAnalyticsDistributions,
+  getAnalyticsReports
 } from "../../controllers/admin/adminAnalyticsController.js";
 import { protectAdmin, requireRole } from "../../middleware/adminAuth.js";
 
@@ -16,5 +17,6 @@ router.get("/analytics/categories", protectAdmin, requireRole("admin"), getAnaly
 router.get("/analytics/departments", protectAdmin, requireRole("admin"), getAnalyticsDepartments);
 router.get("/analytics/trends", protectAdmin, requireRole("admin"), getAnalyticsTrends);
 router.get("/analytics/distributions", protectAdmin, requireRole("admin"), getAnalyticsDistributions);
+router.get("/analytics/reports", protectAdmin, requireRole("admin"), getAnalyticsReports);
 
 export default router;

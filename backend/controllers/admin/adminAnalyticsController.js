@@ -3,7 +3,8 @@ import {
   getAnalyticsCategoriesService,
   getAnalyticsDepartmentsService,
   getAnalyticsTrendsService,
-  getAnalyticsDistributionsService
+  getAnalyticsDistributionsService,
+  getAnalyticsReportsService
 } from "../../services/admin/adminAnalyticsService.js";
 
 /**
@@ -108,6 +109,27 @@ export const getAnalyticsDistributions = async (req, res) => {
     return res.status(statusCode).json({
       success: false,
       message: error.message || "Failed to retrieve analytics distributions"
+    });
+  }
+};
+
+/**
+ * @desc    Get filtered report dataset for CSV & PDF Export
+ * @route   GET /api/admin/analytics/reports
+ * @access  Private (Admin Only)
+ */
+export const getAnalyticsReports = async (req, res) => {
+  try {
+    const reportData = await getAnalyticsReportsService(req.query);
+    return res.status(200).json({
+      success: true,
+      ...reportData
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to generate analytics report dataset"
     });
   }
 };
