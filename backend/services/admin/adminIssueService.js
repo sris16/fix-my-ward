@@ -1,4 +1,24 @@
 import Issue from "../../models/Issue.js";
+import IssueHistory from "../../models/IssueHistory.js";
+
+/**
+ * Helper to record audit trail entries
+ */
+export const recordAuditLog = async ({ issueId, adminId, action, oldValue, newValue, note = "", metadata = {} }) => {
+  try {
+    await IssueHistory.create({
+      issue: issueId,
+      admin: adminId,
+      action,
+      oldValue,
+      newValue,
+      note,
+      metadata,
+    });
+  } catch (error) {
+    console.error("Failed to record IssueHistory audit log:", error);
+  }
+};
 
 /**
  * Service to fetch paginated, filtered, searched, and sorted admin issues
@@ -34,7 +54,6 @@ export const getAdminIssuesService = async (queryParams) => {
 
   // 3. Category Filter
   if (category && category !== "All") {
-    // Map UI category values to Schema category enums if necessary
     let mappedCategory = category;
     if (category === "Road Damage") mappedCategory = "Road";
     if (category === "Water Leakage") mappedCategory = "Water";
@@ -58,6 +77,7 @@ export const getAdminIssuesService = async (queryParams) => {
       { locationText: searchRegex },
       { category: searchRegex },
       { department: searchRegex },
+      { assignedOfficer: searchRegex },
     ];
   }
 
@@ -72,11 +92,9 @@ export const getAdminIssuesService = async (queryParams) => {
       sortOption = { updatedAt: -1 };
       break;
     case "most_upvoted":
-      // Mongo count sorting handled or fallback
       sortOption = { createdAt: -1 };
       break;
     case "highest_priority":
-      // Custom priority sort priority mapping or fallback to createdAt
       sortOption = { createdAt: -1 };
       break;
     case "newest":
@@ -125,6 +143,248 @@ export const getAdminIssueByIdService = async (issueId) => {
     error.statusCode = 404;
     throw error;
   }
+
+  return issue;
+};
+
+/**
+ * Phase 2: Verify an issue
+ */
+export const verifyAdminIssueService = async (issueId, adminId, { reason = "" } = {}) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (issue.status === "Rejected") {
+    const error = new Error("Rejected issues cannot be verified again");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.status !== "Pending") {
+    const error = new Error("Only Pending issues can be verified");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const oldValue = { status: issue.status, verified: issue.verified };
+  issue.verified = true;
+  issue.status = "Verified";
+  await issue.save();
+
+  await recordAuditLog({
+    issueId: issue._id,
+    adminId,
+    action: "VERIFY_ISSUE",
+    oldValue,
+    newValue: { status: "Verified", verified: true },
+    note: reason,
+  });
+
+  return issue;
+};
+
+/**
+ * Phase 2: Reject an issue
+ */
+export const rejectAdminIssueService = async (issueId, adminId, { reason = "" } = {}) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (issue.status === "Rejected") {
+    const error = new Error("Issue is already rejected");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.status === "Resolved") {
+    const error = new Error("Resolved issues cannot be rejected");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const oldValue = { status: issue.status, verified: issue.verified };
+  issue.verified = false;
+  issue.status = "Rejected";
+  await issue.save();
+
+  await recordAuditLog({
+    issueId: issue._id,
+    adminId,
+    action: "REJECT_ISSUE",
+    oldValue,
+    newValue: { status: "Rejected", verified: false },
+    note: reason,
+  });
+
+  return issue;
+};
+
+/**
+ * Phase 3: Department Assignment
+ */
+export const assignAdminIssueService = async (issueId, adminId, { department, assignedOfficer = "" }) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!department || !department.trim()) {
+    const error = new Error("Department is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const cleanDept = department.trim();
+  const cleanOfficer = (assignedOfficer || "").trim();
+
+  if (issue.department === cleanDept && issue.assignedOfficer === cleanOfficer) {
+    const error = new Error("Issue is already assigned to this department and officer");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const oldValue = {
+    department: issue.department,
+    assignedOfficer: issue.assignedOfficer,
+    status: issue.status,
+  };
+
+  issue.department = cleanDept;
+  issue.assignedOfficer = cleanOfficer;
+
+  if (issue.status === "Pending" || issue.status === "Verified") {
+    issue.status = "Assigned";
+  }
+
+  await issue.save();
+
+  await recordAuditLog({
+    issueId: issue._id,
+    adminId,
+    action: "ASSIGN_DEPARTMENT",
+    oldValue,
+    newValue: {
+      department: issue.department,
+      assignedOfficer: issue.assignedOfficer,
+      status: issue.status,
+    },
+  });
+
+  return issue;
+};
+
+/**
+ * Phase 4: Priority Management
+ */
+export const updateAdminIssuePriorityService = async (issueId, adminId, { priority, note = "" }) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const validPriorities = ["Low", "Medium", "High", "Critical"];
+  if (!validPriorities.includes(priority)) {
+    const error = new Error("Invalid priority level");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.priority === priority) {
+    const error = new Error(`Issue priority is already set to ${priority}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const oldValue = issue.priority;
+  issue.priority = priority;
+  await issue.save();
+
+  await recordAuditLog({
+    issueId: issue._id,
+    adminId,
+    action: "CHANGE_PRIORITY",
+    oldValue,
+    newValue: priority,
+    note,
+  });
+
+  return issue;
+};
+
+/**
+ * Phase 5: Status Workflow
+ */
+export const updateAdminIssueStatusService = async (issueId, adminId, { status, note = "" }) => {
+  const issue = await Issue.findById(issueId);
+  if (!issue) {
+    const error = new Error("Issue ticket not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const validStatuses = ["Pending", "Verified", "Assigned", "In Progress", "Resolved", "Rejected"];
+  if (!validStatuses.includes(status)) {
+    const error = new Error("Invalid status value");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // State transitions checks
+  if (issue.status === "Resolved" && status === "Pending") {
+    const error = new Error("Invalid transition: Resolved issue cannot become Pending");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.status === "Rejected" && status === "In Progress") {
+    const error = new Error("Invalid transition: Rejected issue cannot directly become In Progress");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.status === "Pending" && status === "Resolved") {
+    const error = new Error("Invalid transition: Pending issue cannot directly become Resolved without verification or assignment");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (issue.status === status) {
+    const error = new Error(`Issue is already in status: ${status}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const oldValue = { status: issue.status, verified: issue.verified };
+
+  if (status === "Verified") {
+    issue.verified = true;
+  } else if (status === "Rejected") {
+    issue.verified = false;
+  }
+
+  issue.status = status;
+  await issue.save();
+
+  await recordAuditLog({
+    issueId: issue._id,
+    adminId,
+    action: "CHANGE_STATUS",
+    oldValue,
+    newValue: { status, verified: issue.verified },
+    note,
+  });
 
   return issue;
 };

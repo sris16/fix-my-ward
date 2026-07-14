@@ -36,7 +36,7 @@ const issueSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "In Progress", "Resolved"],
+      enum: ["Pending", "Verified", "Assigned", "In Progress", "Resolved", "Rejected"],
       default: "Pending",
     },
 
@@ -47,6 +47,11 @@ const issueSchema = new mongoose.Schema(
     },
 
     department: {
+      type: String,
+      default: "",
+    },
+
+    assignedOfficer: {
       type: String,
       default: "",
     },
