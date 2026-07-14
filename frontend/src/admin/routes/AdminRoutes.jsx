@@ -7,6 +7,7 @@ import Dashboard from "../pages/Dashboard";
 import Issues from "../pages/Issues";
 import IssueDetails from "../pages/Issues/IssueDetails";
 import Departments from "../pages/Departments";
+import DepartmentDetails from "../pages/Departments/DepartmentDetails";
 import Analytics from "../pages/Analytics";
 import Citizens from "../pages/Citizens";
 import LiveMonitor from "../pages/LiveMonitor";
@@ -49,6 +50,7 @@ export default function AdminRoutes() {
             <Route path="issues" element={<Issues />} />
             <Route path="issues/:id" element={<IssueDetails />} />
             <Route path="departments" element={<Departments />} />
+            <Route path="departments/:departmentName" element={<DepartmentDetails />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="citizens" element={<Citizens />} />
             <Route path="live-monitor" element={<LiveMonitor />} />
