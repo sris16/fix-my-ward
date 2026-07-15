@@ -1,8 +1,10 @@
 import Issue from "../../models/Issue.js";
 import IssueHistory from "../../models/IssueHistory.js";
+import Admin from "../../models/Admin.js";
+import { generateIssueLifecycleNotification } from "./adminNotificationService.js";
 
 /**
- * Helper to record audit trail entries
+ * Helper to record audit trail entries and automatically dispatch Version 8 lifecycle notifications
  */
 export const recordAuditLog = async ({ issueId, adminId, action, oldValue, newValue, note = "", metadata = {} }) => {
   try {
@@ -15,8 +17,17 @@ export const recordAuditLog = async ({ issueId, adminId, action, oldValue, newVa
       note,
       metadata,
     });
+
+    // Phase 2 & Phase 5: Trigger centralized notification generation for both Admin & Citizen
+    const [issueDoc, adminDoc] = await Promise.all([
+      Issue.findById(issueId).lean(),
+      Admin.findById(adminId).select("name email role").lean()
+    ]);
+    if (issueDoc) {
+      await generateIssueLifecycleNotification(action, issueDoc, adminDoc, { oldValue, newValue, note, ...metadata });
+    }
   } catch (error) {
-    console.error("Failed to record IssueHistory audit log:", error);
+    console.error("Failed to record IssueHistory audit log or notification:", error);
   }
 };
 

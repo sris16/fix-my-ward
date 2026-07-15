@@ -5,6 +5,7 @@ import adminDashboardRoutes from "./admin/adminDashboardRoutes.js";
 import adminDepartmentRoutes from "./admin/adminDepartmentRoutes.js";
 import adminAnalyticsRoutes from "./admin/adminAnalyticsRoutes.js";
 import adminLiveMonitorRoutes from "./admin/adminLiveMonitorRoutes.js";
+import adminNotificationRoutes from "./admin/adminNotificationRoutes.js";
 
 const router = express.Router();
 
@@ -23,7 +24,10 @@ router.use("/", adminDepartmentRoutes);
 // 📈 Mount Admin Executive Analytics & Intelligence APIs (/api/admin/analytics/overview, /categories, /departments, /trends, /distributions)
 router.use("/", adminAnalyticsRoutes);
 
-// 🚨 Mount Admin Live Command Center APIs (/api/admin/live/overview, /activity, /issues)
+// 🚨 Mount Admin Live Command Center APIs (/api/admin/live/overview, /activity, /issues, /wards)
 router.use("/", adminLiveMonitorRoutes);
+
+// 🔔 Mount Admin Notification Center & Broadcast APIs (/api/admin/notifications, /broadcast, /broadcasts)
+router.use("/", adminNotificationRoutes);
 
 export default router;
