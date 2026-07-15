@@ -4,6 +4,7 @@ import adminIssueRoutes from "./admin/adminIssueRoutes.js";
 import adminDashboardRoutes from "./admin/adminDashboardRoutes.js";
 import adminDepartmentRoutes from "./admin/adminDepartmentRoutes.js";
 import adminAnalyticsRoutes from "./admin/adminAnalyticsRoutes.js";
+import adminLiveMonitorRoutes from "./admin/adminLiveMonitorRoutes.js";
 
 const router = express.Router();
 
@@ -21,5 +22,8 @@ router.use("/", adminDepartmentRoutes);
 
 // 📈 Mount Admin Executive Analytics & Intelligence APIs (/api/admin/analytics/overview, /categories, /departments, /trends, /distributions)
 router.use("/", adminAnalyticsRoutes);
+
+// 🚨 Mount Admin Live Command Center APIs (/api/admin/live/overview, /activity, /issues)
+router.use("/", adminLiveMonitorRoutes);
 
 export default router;
