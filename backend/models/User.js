@@ -23,10 +23,32 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["citizen", "admin"],
       default: "citizen",
+      index: true,
+    },
+    phone: {
+      type: String,
+      default: "",
+    },
+    ward: {
+      type: String,
+      default: "",
+      index: true,
+    },
+    avatar: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive", "Suspended"],
+      default: "Active",
+      index: true,
     },
   },
   { timestamps: true }
 );
+
+userSchema.index({ role: 1, createdAt: -1 });
 
 // 🔐 Hash password before saving
 userSchema.pre("save", async function () {

@@ -10,6 +10,7 @@ import Departments from "../pages/Departments";
 import DepartmentDetails from "../pages/Departments/DepartmentDetails";
 import Analytics from "../pages/Analytics";
 import Citizens from "../pages/Citizens";
+import CitizenProfile from "../pages/Citizens/CitizenProfile";
 import LiveMonitor from "../pages/LiveMonitor";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
@@ -53,6 +54,7 @@ export default function AdminRoutes() {
             <Route path="departments/:departmentName" element={<DepartmentDetails />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="citizens" element={<Citizens />} />
+            <Route path="citizens/:id" element={<CitizenProfile />} />
             <Route path="live-monitor" element={<LiveMonitor />} />
             <Route path="notifications" element={<Notifications />} />
             <Route path="settings" element={<Settings />} />
