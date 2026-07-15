@@ -1,7 +1,8 @@
 import {
   getLiveOverviewService,
   getLiveActivityService,
-  getLiveIssuesService
+  getLiveIssuesService,
+  getLiveWardsService
 } from "../../services/admin/adminLiveMonitorService.js";
 
 /**
@@ -64,6 +65,27 @@ export const getLiveIssues = async (req, res) => {
     return res.status(statusCode).json({
       success: false,
       message: error.message || "Failed to retrieve live active issues"
+    });
+  }
+};
+
+/**
+ * @desc    Get Ward / Zone Aggregated Monitoring Telemetry
+ * @route   GET /api/admin/live/wards
+ * @access  Private (Admin Only)
+ */
+export const getLiveWards = async (req, res) => {
+  try {
+    const wards = await getLiveWardsService();
+    return res.status(200).json({
+      success: true,
+      wards
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to retrieve ward monitoring metrics"
     });
   }
 };

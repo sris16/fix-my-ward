@@ -1,23 +1,27 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAdminAuth } from "../../context/AdminAuthContext";
+import { useLiveTelemetryRefresh } from "../../hooks/useLiveTelemetryRefresh";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SectionTitle } from "../../components/ui/SectionTitle";
 import { StatCard } from "../../components/ui/StatCard";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { PriorityBadge } from "../../components/ui/PriorityBadge";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { QuickActionsPanel } from "../../components/live/QuickActionsPanel";
+import { WardMonitoringPanel } from "../../components/live/WardMonitoringPanel";
 
 const API_OVERVIEW_URL = "http://localhost:5000/api/admin/live/overview";
 const API_ACTIVITY_URL = "http://localhost:5000/api/admin/live/activity";
 const API_ISSUES_URL = "http://localhost:5000/api/admin/live/issues";
 const API_DEPARTMENTS_URL = "http://localhost:5000/api/admin/departments";
+const API_WARDS_URL = "http://localhost:5000/api/admin/live/wards";
 
-// Coimbatore Center coordinates for map view
+// Coimbatore Center coordinates for default GIS map view
 const COIMBATORE_CENTER = [11.0168, 76.9558];
 
 /**
@@ -88,50 +92,61 @@ export default function LiveMonitor() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date());
 
-  // Phase 1: Data states
+  // Phase 1-7: Data states
   const [overview, setOverview] = useState({});
   const [issues, setIssues] = useState([]);
   const [activity, setActivity] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [wards, setWards] = useState([]);
 
-  // Map state
+  // Map and filter states
   const [mapCenter, setMapCenter] = useState(COIMBATORE_CENTER);
   const [mapZoom, setMapZoom] = useState(13);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState("ALL");
   const [selectedPriorityFilter, setSelectedPriorityFilter] = useState("ALL");
+  const [selectedWardId, setSelectedWardId] = useState(null);
 
-  // Phase 1-5 Fetch function
-  const fetchLiveTelemetry = async (silent = false) => {
+  // Phase 1-9 Fetch function with memoized callback
+  const fetchLiveTelemetry = useCallback(async (silent = false) => {
     if (!token) return;
     if (!silent) setLoading(true);
     setError(false);
 
     try {
-      const [ovRes, actRes, issRes, deptRes] = await Promise.all([
+      const [ovRes, actRes, issRes, deptRes, wardRes] = await Promise.all([
         axios.get(API_OVERVIEW_URL, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(`${API_ACTIVITY_URL}?limit=25`, { headers: { Authorization: `Bearer ${token}` } }),
         axios.get(API_ISSUES_URL, { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get(API_DEPARTMENTS_URL, { headers: { Authorization: `Bearer ${token}` } })
+        axios.get(API_DEPARTMENTS_URL, { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get(API_WARDS_URL, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
       if (ovRes.data.success) setOverview(ovRes.data);
       if (actRes.data.success) setActivity(actRes.data.activity || []);
       if (issRes.data.success) setIssues(issRes.data.issues || []);
       if (deptRes.data.success) setDepartments(deptRes.data.departments || []);
-      setLastRefreshed(new Date());
+      if (wardRes.data.success) setWards(wardRes.data.wards || []);
     } catch (err) {
       console.error("Failed to fetch live command center telemetry:", err);
       if (!silent) setError(true);
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [token]);
+
+  // Phase 6: Real-Time Refresh Hook (with Socket.IO readiness)
+  const {
+    isPolling,
+    intervalMs,
+    lastUpdated,
+    changeInterval,
+    triggerImmediateRefresh
+  } = useLiveTelemetryRefresh(fetchLiveTelemetry, 20000);
 
   useEffect(() => {
-    fetchLiveTelemetry();
-  }, [token]);
+    fetchLiveTelemetry(false);
+  }, [fetchLiveTelemetry]);
 
   // Phase 5: Filter emergencies and critical issues
   const emergencyList = useMemo(() => {
@@ -184,6 +199,35 @@ export default function LiveMonitor() {
     }
   };
 
+  // Phase 7 Ward Click Zoom Handler
+  const handleSelectWard = useCallback((ward) => {
+    if (selectedWardId === ward.id) {
+      // Toggle off and reset map to city center
+      setSelectedWardId(null);
+      setMapCenter(COIMBATORE_CENTER);
+      setMapZoom(13);
+    } else {
+      setSelectedWardId(ward.id);
+      if (ward.center && ward.center.length === 2) {
+        setMapCenter(ward.center);
+        setMapZoom(14);
+      }
+    }
+  }, [selectedWardId]);
+
+  // Phase 8 Quick Actions Reset Handlers
+  const handleResetAllFilters = useCallback(() => {
+    setSelectedStatusFilter("ALL");
+    setSelectedPriorityFilter("ALL");
+    setSelectedWardId(null);
+    setMapCenter(COIMBATORE_CENTER);
+    setMapZoom(13);
+  }, []);
+
+  const activeFiltersCount = (selectedStatusFilter !== "ALL" ? 1 : 0) +
+                             (selectedPriorityFilter !== "ALL" ? 1 : 0) +
+                             (selectedWardId ? 1 : 0);
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -194,6 +238,7 @@ export default function LiveMonitor() {
           <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>
           <div className="h-32 bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>
         </div>
+        <div className="h-28 bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>
         <div className="h-[500px] bg-gray-200 dark:bg-gray-800 rounded-3xl"></div>
       </div>
     );
@@ -219,27 +264,46 @@ export default function LiveMonitor() {
   return (
     <div className="space-y-6">
       
-      {/* 1. Page Header & Live Pulse Status Bar */}
+      {/* 1. Page Header & Phase 6 Real-Time Pulse Status Bar */}
       <PageHeader 
         title="Municipal Live Command Center" 
-        subtitle="Real-time GIS tracking, emergency triage queue, active division workload, and stream telemetry across Coimbatore"
+        subtitle="Real-time GIS tracking, emergency triage queue, ward zone monitoring, and operational telemetry across Coimbatore"
         actions={
-          <div className="flex items-center gap-3 bg-white dark:bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-250 dark:border-gray-800 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-gray-900 px-3.5 py-2 rounded-2xl border border-gray-250 dark:border-gray-800 shadow-sm text-xs font-bold">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span className={`w-2.5 h-2.5 rounded-full ${isPolling ? "bg-emerald-500 animate-pulse" : "bg-gray-400"}`}></span>
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-gray-300">
-                LIVE STREAM OPERATIONAL
+                {isPolling ? "LIVE STREAM ACTIVE" : "STREAM PAUSED"}
               </span>
             </div>
+
             <span className="text-gray-300 dark:text-gray-700 font-light">|</span>
+
+            {/* Interval dropdown */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] uppercase text-gray-400 font-black">Refresh:</span>
+              <select
+                value={intervalMs}
+                onChange={(e) => changeInterval(Number(e.target.value))}
+                className="bg-slate-50 dark:bg-gray-950 px-2 py-1 rounded-lg border border-gray-250 dark:border-gray-800 text-slate-800 dark:text-white font-black cursor-pointer focus:outline-none"
+              >
+                <option value={15000}>Every 15s</option>
+                <option value={20000}>Every 20s</option>
+                <option value={30000}>Every 30s</option>
+                <option value={60000}>Every 60s</option>
+                <option value={0}>Paused (Manual)</option>
+              </select>
+            </div>
+
             <button
-              onClick={() => fetchLiveTelemetry(true)}
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+              onClick={() => triggerImmediateRefresh(false)}
+              className="px-2.5 py-1 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 transition flex items-center gap-1"
+              title={`Last synced at ${lastUpdated.toLocaleTimeString()}`}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-3.5 h-3.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
               </svg>
-              Refresh ({lastRefreshed.toLocaleTimeString()})
+              <span>Sync Now</span>
             </button>
           </div>
         }
@@ -347,7 +411,21 @@ export default function LiveMonitor() {
         />
       </div>
 
-      {/* 4. Phase 2 Interactive GIS Map & Command Center Controls */}
+      {/* 4. Phase 8 Operational Quick Actions Panel */}
+      <QuickActionsPanel
+        onFilterCritical={() => {
+          setSelectedPriorityFilter("Critical");
+          setSelectedStatusFilter("ALL");
+        }}
+        onFilterPending={() => {
+          setSelectedStatusFilter("Pending");
+          setSelectedPriorityFilter("ALL");
+        }}
+        onResetFilters={handleResetAllFilters}
+        activeFilterCount={activeFiltersCount}
+      />
+
+      {/* 5. Phase 2 Interactive GIS Map & Command Center Controls */}
       <div className="bg-white dark:bg-gray-900/60 backdrop-blur-sm border border-gray-250 dark:border-gray-800/80 rounded-3xl p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-150 dark:border-gray-800 pb-4">
           <div>
@@ -387,12 +465,7 @@ export default function LiveMonitor() {
             </div>
 
             <button
-              onClick={() => {
-                setSelectedStatusFilter("ALL");
-                setSelectedPriorityFilter("ALL");
-                setMapCenter(COIMBATORE_CENTER);
-                setMapZoom(13);
-              }}
+              onClick={handleResetAllFilters}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition"
             >
               Reset Map View
@@ -456,7 +529,14 @@ export default function LiveMonitor() {
         </div>
       </div>
 
-      {/* 5. Phase 3 & 4 Stream Feed & Department Status Board Grid */}
+      {/* 6. Phase 7 Ward / Zone Monitoring Panel */}
+      <WardMonitoringPanel
+        wards={wards}
+        onSelectWard={handleSelectWard}
+        selectedWardId={selectedWardId}
+      />
+
+      {/* 7. Phase 3 & 4 Stream Feed & Department Status Board Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Phase 3 Live Activity Feed (IssueHistory Stream) */}

@@ -2,7 +2,8 @@ import express from "express";
 import {
   getLiveOverview,
   getLiveActivity,
-  getLiveIssues
+  getLiveIssues,
+  getLiveWards
 } from "../../controllers/admin/adminLiveMonitorController.js";
 import { protectAdmin, requireRole } from "../../middleware/adminAuth.js";
 
@@ -12,5 +13,6 @@ const router = express.Router();
 router.get("/live/overview", protectAdmin, requireRole("admin"), getLiveOverview);
 router.get("/live/activity", protectAdmin, requireRole("admin"), getLiveActivity);
 router.get("/live/issues", protectAdmin, requireRole("admin"), getLiveIssues);
+router.get("/live/wards", protectAdmin, requireRole("admin"), getLiveWards);
 
 export default router;

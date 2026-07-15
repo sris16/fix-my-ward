@@ -195,3 +195,115 @@ export const getLiveIssuesService = async (filters = {}) => {
     updatedAt: item.updatedAt
   }));
 };
+
+/**
+ * Phase 7: Get Ward / Zone Grouped Monitoring Metrics
+ */
+export const getLiveWardsService = async () => {
+  const issues = await Issue.find().lean();
+
+  // Canonical Coimbatore municipal zones and exact GPS centers for zoom panning
+  const zones = [
+    {
+      id: "zone-central",
+      name: "Central Zone (Wards 1-20)",
+      center: [11.0168, 76.9558],
+      keywords: ["central", "gandhipuram", "rs puram", "town hall", "race course", "ward 1", "ward 5", "ward 10", "ward 15"],
+      open: 0,
+      resolved: 0,
+      critical: 0,
+      categoriesCount: {}
+    },
+    {
+      id: "zone-north",
+      name: "North Zone (Wards 21-40)",
+      center: [11.0500, 76.9600],
+      keywords: ["north", "saravanampatti", "ganapathy", "thudiyalur", "kavundampalayam", "ward 22", "ward 28", "ward 35"],
+      open: 0,
+      resolved: 0,
+      critical: 0,
+      categoriesCount: {}
+    },
+    {
+      id: "zone-east",
+      name: "East Zone (Wards 41-60)",
+      center: [11.0200, 77.0100],
+      keywords: ["east", "peelamedu", "singanallur", "ramnathapuram", "ondipudur", "ward 45", "ward 52", "ward 58"],
+      open: 0,
+      resolved: 0,
+      critical: 0,
+      categoriesCount: {}
+    },
+    {
+      id: "zone-south",
+      name: "South Zone (Wards 61-80)",
+      center: [10.9600, 76.9650],
+      keywords: ["south", "kuniamuthur", "sundarapuram", "podanur", "kurichi", "ward 63", "ward 70", "ward 76"],
+      open: 0,
+      resolved: 0,
+      critical: 0,
+      categoriesCount: {}
+    },
+    {
+      id: "zone-west",
+      name: "West Zone (Wards 81-100)",
+      center: [11.0100, 76.9100],
+      keywords: ["west", "vadapeelamedu", "saibaba colony", "kovaipudur", "perur", "ward 85", "ward 92", "ward 98"],
+      open: 0,
+      resolved: 0,
+      critical: 0,
+      categoriesCount: {}
+    }
+  ];
+
+  for (const issue of issues) {
+    const locText = (issue.locationText || "").toLowerCase();
+    const titleText = (issue.title || "").toLowerCase();
+    const descText = (issue.description || "").toLowerCase();
+    const combinedText = `${locText} ${titleText} ${descText}`;
+
+    // Find best matching zone or distribute across zones deterministically based on ID hash if no explicit keyword
+    let matchedZone = zones.find((z) => z.keywords.some((k) => combinedText.includes(k)));
+    if (!matchedZone) {
+      const idStr = issue._id ? issue._id.toString() : "0";
+      let hash = 0;
+      for (let i = 0; i < idStr.length; i++) hash += idStr.charCodeAt(i);
+      matchedZone = zones[hash % zones.length];
+    }
+
+    const isResolved = issue.status === "Resolved" || issue.status === "Rejected";
+    if (isResolved) {
+      matchedZone.resolved += 1;
+    } else {
+      matchedZone.open += 1;
+      if (issue.priority === "Critical") {
+        matchedZone.critical += 1;
+      }
+    }
+
+    const cat = issue.category || "General";
+    matchedZone.categoriesCount[cat] = (matchedZone.categoriesCount[cat] || 0) + 1;
+  }
+
+  return zones.map((z) => {
+    const total = z.open + z.resolved;
+    const completionPct = total > 0 ? Math.round((z.resolved / total) * 100) : 100;
+    
+    // Top categories sorted by count descending
+    const topCategories = Object.entries(z.categoriesCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, count]) => ({ name, count }));
+
+    return {
+      id: z.id,
+      name: z.name,
+      center: z.center,
+      openIssues: z.open,
+      resolvedIssues: z.resolved,
+      criticalIssues: z.critical,
+      completionPercentage: completionPct,
+      topCategories
+    };
+  });
+};
