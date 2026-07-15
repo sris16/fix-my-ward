@@ -30,7 +30,17 @@ const AdminProtectedRoute = () => {
     return <Navigate to="/admin/login" replace />;
   }
 
-  if (admin.role !== "admin") {
+  const validAdminRoles = [
+    "admin",
+    "super-admin",
+    "Super Administrator",
+    "Municipal Commissioner",
+    "Department Manager",
+    "Department Officer",
+    "Viewer"
+  ];
+
+  if (!validAdminRoles.includes(admin.role)) {
     return <Navigate to="/admin/access-denied" replace />;
   }
 

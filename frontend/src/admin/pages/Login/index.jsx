@@ -10,7 +10,7 @@ export default function Login() {
   const { login, isAuthenticated, error: authError, setError } = useAdminAuth();
 
   const [email, setEmail] = useState("admin@fixmyward.gov.in");
-  const [password, setPassword] = useState("adminpassword123");
+  const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
   const [validationError, setValidationError] = useState("");
 
