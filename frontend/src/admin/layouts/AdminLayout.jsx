@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import axios from "axios";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { useTheme } from "../../hooks/useTheme";
 import { useAdminAuth } from "../context/AdminAuthContext";
@@ -26,7 +27,7 @@ import {
 
 export default function AdminLayout() {
   const { theme, toggleTheme } = useTheme();
-  const { admin, logout } = useAdminAuth();
+  const { admin, logout, token } = useAdminAuth();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -37,8 +38,57 @@ export default function AdminLayout() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // Phase 8: Live Notification Bell state & auto-refresh polling
+  const [recentNotifications, setRecentNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const profileRef = useRef(null);
   const notifRef = useRef(null);
+
+  const fetchBellNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get("http://localhost:5000/api/admin/notifications?limit=5&read=ALL", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setRecentNotifications(res.data.notifications || []);
+        setUnreadCount(res.data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch bell notifications summary:", err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchBellNotifications();
+    const interval = setInterval(fetchBellNotifications, 25000);
+    return () => clearInterval(interval);
+  }, [fetchBellNotifications]);
+
+  const handleMarkBellRead = async (id) => {
+    try {
+      await axios.put(`http://localhost:5000/api/admin/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRecentNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to mark bell alert read:", err);
+    }
+  };
+
+  const handleMarkAllBellRead = async () => {
+    try {
+      await axios.put("http://localhost:5000/api/admin/notifications/read-all", {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRecentNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all read via bell:", err);
+    }
+  };
 
   // Sync collapsed state to localStorage
   useEffect(() => {
@@ -248,43 +298,120 @@ export default function AdminLayout() {
               {theme === "dark" ? <SunIcon className="w-4 h-4 text-emerald-450" /> : <MoonIcon className="w-4 h-4 text-emerald-600" />}
             </button>
 
-            {/* Notification Bell with simulated list */}
+            {/* Notification Bell with live telemetry */}
             <div className="relative" ref={notifRef}>
               <button
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => {
+                  if (!showNotifications) fetchBellNotifications();
+                  setShowNotifications(!showNotifications);
+                }}
                 className="p-2.5 bg-slate-50 dark:bg-gray-800/50 hover:bg-slate-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-800 rounded-xl text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white transition relative"
+                title="Municipal Alert Center"
               >
                 <BellIcon className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-500 text-slate-950 font-black text-[10px] rounded-full flex items-center justify-center border border-white dark:border-gray-900 shadow-sm animate-pulse">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
 
               {/* Notification Overlay Menu */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2.5 w-76 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl z-50 p-4 text-left animate-scale-in">
+                <div className="absolute right-0 mt-2.5 w-80 sm:w-96 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl shadow-2xl z-50 p-4 text-left animate-scale-in">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-800">
-                    <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Critical Alerts</h4>
-                    <span className="text-[9px] bg-red-500/10 text-red-650 dark:text-red-400 px-2 py-0.5 rounded-full font-bold">
-                      2 Unresolved
-                    </span>
-                  </div>
-                  <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                    <div className="p-2 bg-slate-50 dark:bg-gray-950/40 rounded-xl border border-transparent hover:border-red-500/20 transition">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                        <span className="text-[10px] font-black text-red-550 dark:text-red-400 uppercase tracking-wide">Critical Road</span>
-                      </div>
-                      <p className="text-[11px] font-medium leading-normal">Pothole near Signal reported with 45 upvotes.</p>
-                      <span className="text-[9px] text-gray-500 block mt-1">12 minutes ago</span>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Live Operational Feed</h4>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] font-black rounded-lg border border-amber-500/20">
+                          {unreadCount} Unread
+                        </span>
+                      )}
                     </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllBellRead}
+                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Mark All Read
+                      </button>
+                    )}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 text-center">
+
+                  <div className="mt-3 space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {recentNotifications.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-gray-400 font-medium">
+                        No operational alerts queued in command center.
+                      </div>
+                    ) : (
+                      recentNotifications.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`p-3 rounded-2xl border transition flex flex-col gap-1 ${
+                            !notif.read
+                              ? "bg-blue-50/70 dark:bg-blue-950/25 border-blue-300 dark:border-blue-800/80 shadow-sm"
+                              : "bg-slate-50/60 dark:bg-gray-950/40 border-gray-200/60 dark:border-gray-800/60"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              {!notif.read && <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>}
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                                {notif.type || "Information"}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-gray-800 text-slate-700 dark:text-gray-300 font-bold">
+                                {notif.priority}
+                              </span>
+                            </div>
+                            <span className="text-[9px] text-gray-400">
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                            </span>
+                          </div>
+
+                          <h5 className="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                            {notif.title}
+                          </h5>
+
+                          <p className="text-[11px] text-gray-600 dark:text-gray-300 font-medium leading-relaxed line-clamp-2">
+                            {notif.message}
+                          </p>
+
+                          <div className="flex items-center justify-between pt-1 text-[10px]">
+                            <span className="text-gray-400 font-bold">Division: {notif.department}</span>
+                            <div className="flex items-center gap-2">
+                              {!notif.read && (
+                                <button
+                                  onClick={() => handleMarkBellRead(notif.id)}
+                                  className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                                >
+                                  Read
+                                </button>
+                              )}
+                              {notif.ticketId && (
+                                <Link
+                                  to={`/admin/issues/${notif.relatedIssue?._id || notif.relatedIssue}`}
+                                  onClick={() => setShowNotifications(false)}
+                                  className="text-slate-800 dark:text-gray-200 font-black hover:underline"
+                                >
+                                  {notif.ticketId} &rarr;
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800 text-center flex items-center justify-between text-[11px] font-black">
                     <Link
                       to="/admin/notifications"
                       onClick={() => setShowNotifications(false)}
-                      className="text-[10px] text-emerald-600 dark:text-emerald-450 hover:underline font-bold uppercase"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      View All Alerts
+                      Open Communication Center &rarr;
                     </Link>
+                    <span className="text-gray-400 text-[10px] font-normal">Real-Time Sync</span>
                   </div>
                 </div>
               )}

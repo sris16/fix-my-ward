@@ -101,5 +101,10 @@ notificationSchema.pre("save", function () {
   }
 });
 
+// Phase 9: Optimized compound indexes for high-speed pagination and unread counts
+notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ recipientType: 1, createdAt: -1 });
+notificationSchema.index({ priority: 1, read: 1, createdAt: -1 });
+
 const Notification = mongoose.model("Notification", notificationSchema);
 export default Notification;

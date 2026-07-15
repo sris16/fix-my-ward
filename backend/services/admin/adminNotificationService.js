@@ -43,14 +43,19 @@ export const generateIssueLifecycleNotification = async (action, issue, admin, m
   const notificationsToCreate = [];
 
   switch (action) {
-    case "VERIFY_ISSUE":
+    case "VERIFY_ISSUE": {
       // 1. Notify Citizen
       if (citizenId) {
+        const rendered = renderNotificationTemplate("ISSUE_VERIFIED_CITIZEN", {
+          citizenName: issue.reportedBy?.name || "Citizen",
+          ticketId,
+          issueTitle: issue.title
+        });
         notificationsToCreate.push({
           recipient: citizenId,
           recipientType: "Citizen",
-          title: "Complaint Verified by Municipal Command",
-          message: `Hello Citizen, your reported issue (${ticketId}: ${issue.title}) has been formally verified by our administrative team and queued for department assignment.`,
+          title: rendered.title,
+          message: rendered.message,
           type: "Information",
           priority: "Medium",
           relatedIssue: issue._id,
@@ -69,15 +74,21 @@ export const generateIssueLifecycleNotification = async (action, issue, admin, m
         department: departmentName
       });
       break;
+    }
 
-    case "ASSIGN_DEPARTMENT":
+    case "ASSIGN_DEPARTMENT": {
       // 1. Notify Citizen
       if (citizenId) {
+        const rendered = renderNotificationTemplate("ISSUE_ASSIGNED_CITIZEN", {
+          citizenName: issue.reportedBy?.name || "Citizen",
+          ticketId,
+          department: departmentName
+        });
         notificationsToCreate.push({
           recipient: citizenId,
           recipientType: "Citizen",
-          title: "Department Allocated to Your Complaint",
-          message: `Your issue (${ticketId}) has been assigned to the ${departmentName} division for field resolution.`,
+          title: rendered.title,
+          message: rendered.message,
           type: "Information",
           priority: "High",
           relatedIssue: issue._id,
@@ -85,43 +96,67 @@ export const generateIssueLifecycleNotification = async (action, issue, admin, m
         });
       }
       // 2. Notify Department Team
+      const deptRendered = renderNotificationTemplate("DEPARTMENT_UPDATE_OPERATIONS", {
+        department: departmentName,
+        ticketId,
+        issueTitle: issue.title,
+        adminName
+      });
       notificationsToCreate.push({
         recipient: departmentName,
         recipientType: "Department",
-        title: `New Caseload Assigned: ${ticketId}`,
-        message: `Complaint "${issue.title}" allocated to ${departmentName} by ${adminName}.`,
+        title: deptRendered.title,
+        message: deptRendered.message,
         type: "Warning",
         priority: issue.priority || "Medium",
         relatedIssue: issue._id,
         department: departmentName
       });
       break;
+    }
 
-    case "CHANGE_PRIORITY":
+    case "CHANGE_PRIORITY": {
+      const rendered = renderNotificationTemplate("PRIORITY_ESCALATED_ADMIN", {
+        ticketId,
+        issueTitle: issue.title,
+        newValue: metadata.newValue || issue.priority,
+        adminName
+      });
       notificationsToCreate.push({
         recipient: "ALL_ADMINS",
         recipientType: "Admin",
-        title: `Priority Escalated: ${ticketId}`,
-        message: `Hazard severity for "${issue.title}" changed to ${metadata.newValue || issue.priority} by ${adminName}.`,
+        title: rendered.title,
+        message: rendered.message,
         type: (metadata.newValue === "Critical" || issue.priority === "Critical") ? "Emergency" : "Warning",
         priority: metadata.newValue || issue.priority || "High",
         relatedIssue: issue._id,
         department: departmentName
       });
       break;
+    }
 
-    case "CHANGE_STATUS":
+    case "CHANGE_STATUS": {
       // 1. Notify Citizen of progress
       if (citizenId) {
         const newStatus = metadata.newValue || issue.status;
         const isResolved = newStatus === "Resolved";
+        const rendered = isResolved
+          ? renderNotificationTemplate("ISSUE_RESOLVED_CITIZEN", {
+              citizenName: issue.reportedBy?.name || "Citizen",
+              ticketId,
+              issueTitle: issue.title,
+              department: departmentName
+            })
+          : {
+              title: `Status Updated: ${newStatus}`,
+              message: `Your issue (${ticketId}) status has transitioned to "${newStatus}". Our teams are actively on the ground.`
+            };
+
         notificationsToCreate.push({
           recipient: citizenId,
           recipientType: "Citizen",
-          title: isResolved ? "🎉 Complaint Resolved!" : `Status Updated: ${newStatus}`,
-          message: isResolved
-            ? `We are pleased to inform you that your reported issue (${ticketId}: ${issue.title}) has been successfully resolved by ${departmentName}. Thank you for improving our civic community!`
-            : `Your issue (${ticketId}) status has transitioned to "${newStatus}". Our teams are actively on the ground.`,
+          title: rendered.title,
+          message: rendered.message,
           type: isResolved ? "Success" : "Information",
           priority: isResolved ? "High" : "Medium",
           relatedIssue: issue._id,
@@ -140,6 +175,7 @@ export const generateIssueLifecycleNotification = async (action, issue, admin, m
         department: departmentName
       });
       break;
+    }
 
     case "REJECT_ISSUE":
       if (citizenId) {
@@ -349,4 +385,158 @@ export const markAllNotificationsAsReadService = async () => {
 
 export const deleteNotificationService = async (notificationId) => {
   return await Notification.findByIdAndDelete(notificationId);
+};
+
+/**
+ * ============================================================================
+ * Phase 6 — Reusable Notification Template Catalog & Rendering Engine
+ * ============================================================================
+ */
+export const NOTIFICATION_TEMPLATES = [
+  {
+    key: "ISSUE_VERIFIED_CITIZEN",
+    name: "Issue Verified (Citizen Alert)",
+    category: "Citizen Communication",
+    titleTemplate: "Complaint Verified by Municipal Command",
+    messageTemplate: "Hello {{citizenName}}, your reported issue ({{ticketId}}: {{issueTitle}}) has been formally verified by our administrative team and queued for department assignment.",
+    placeholders: ["citizenName", "ticketId", "issueTitle"]
+  },
+  {
+    key: "ISSUE_ASSIGNED_CITIZEN",
+    name: "Department Assigned (Citizen Alert)",
+    category: "Citizen Communication",
+    titleTemplate: "Department Allocated to Your Complaint",
+    messageTemplate: "Hello {{citizenName}}, your issue {{ticketId}} has been assigned to the {{department}} division for field resolution.",
+    placeholders: ["citizenName", "ticketId", "department"]
+  },
+  {
+    key: "PRIORITY_ESCALATED_ADMIN",
+    name: "Priority Escalated (Admin Alert)",
+    category: "Operational Alert",
+    titleTemplate: "Priority Escalated: {{ticketId}}",
+    messageTemplate: "Hazard severity for \"{{issueTitle}}\" changed to {{newValue}} by {{adminName}}.",
+    placeholders: ["ticketId", "issueTitle", "newValue", "adminName"]
+  },
+  {
+    key: "ISSUE_RESOLVED_CITIZEN",
+    name: "Issue Resolved (Citizen Alert)",
+    category: "Citizen Communication",
+    titleTemplate: "🎉 Complaint Resolved!",
+    messageTemplate: "Hello {{citizenName}}, we are pleased to inform you that your reported issue ({{ticketId}}: {{issueTitle}}) has been successfully resolved by {{department}}. Thank you for improving our civic community!",
+    placeholders: ["citizenName", "ticketId", "issueTitle", "department"]
+  },
+  {
+    key: "EMERGENCY_ALERT_BROADCAST",
+    name: "Emergency Alert (Broadcast)",
+    category: "Citywide Broadcast",
+    titleTemplate: "🚨 Emergency Municipal Advisory: {{title}}",
+    messageTemplate: "Critical Alert for {{target}}: {{message}}. Department in charge: {{department}}.",
+    placeholders: ["title", "target", "message", "department"]
+  },
+  {
+    key: "MAINTENANCE_NOTICE_BROADCAST",
+    name: "Maintenance Notice (Broadcast)",
+    category: "Citywide Broadcast",
+    titleTemplate: "🚧 Scheduled Infrastructure Maintenance",
+    messageTemplate: "Attention {{target}}: Scheduled maintenance will affect {{department}} operations starting {{timeText}}. Please plan accordingly.",
+    placeholders: ["target", "department", "timeText"]
+  },
+  {
+    key: "DEPARTMENT_UPDATE_OPERATIONS",
+    name: "Department Workload Update",
+    category: "Operational Alert",
+    titleTemplate: "Caseload Allocated to {{department}}",
+    messageTemplate: "New high-priority ticket {{ticketId}} ({{issueTitle}}) has been routed to {{department}} by {{adminName}}.",
+    placeholders: ["department", "ticketId", "issueTitle", "adminName"]
+  }
+];
+
+export const renderNotificationTemplate = (templateKey, placeholders = {}) => {
+  const template = NOTIFICATION_TEMPLATES.find((t) => t.key === templateKey);
+  if (!template) {
+    return {
+      title: placeholders.title || "System Notification",
+      message: placeholders.message || ""
+    };
+  }
+
+  let title = template.titleTemplate;
+  let message = template.messageTemplate;
+
+  for (const [key, val] of Object.entries(placeholders)) {
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+    title = title.replace(regex, val || "");
+    message = message.replace(regex, val || "");
+  }
+
+  return { title, message };
+};
+
+export const getNotificationTemplatesService = async () => {
+  return NOTIFICATION_TEMPLATES;
+};
+
+/**
+ * ============================================================================
+ * Phase 7 — Extensible Notification Preferences Architecture
+ * ============================================================================
+ */
+export const getAdminNotificationPreferencesService = async (adminId) => {
+  if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
+    return {
+      inApp: true,
+      emailAlerts: false,
+      smsAlerts: false,
+      pushNotifications: false,
+      minimumPriority: "Low",
+      channels: {
+        citizenReports: true,
+        departmentEscalations: true,
+        emergencyBroadcasts: true,
+        systemAuditNotes: true
+      }
+    };
+  }
+
+  const admin = await Admin.findById(adminId).select("metadata name email").lean();
+  const prefs = admin?.metadata?.notificationPreferences || {};
+
+  return {
+    inApp: prefs.inApp !== undefined ? prefs.inApp : true,
+    emailAlerts: prefs.emailAlerts !== undefined ? prefs.emailAlerts : false,
+    smsAlerts: prefs.smsAlerts !== undefined ? prefs.smsAlerts : false,
+    pushNotifications: prefs.pushNotifications !== undefined ? prefs.pushNotifications : false,
+    minimumPriority: prefs.minimumPriority || "Low",
+    channels: {
+      citizenReports: prefs.channels?.citizenReports !== undefined ? prefs.channels.citizenReports : true,
+      departmentEscalations: prefs.channels?.departmentEscalations !== undefined ? prefs.channels.departmentEscalations : true,
+      emergencyBroadcasts: prefs.channels?.emergencyBroadcasts !== undefined ? prefs.channels.emergencyBroadcasts : true,
+      systemAuditNotes: prefs.channels?.systemAuditNotes !== undefined ? prefs.channels.systemAuditNotes : true
+    }
+  };
+};
+
+export const updateAdminNotificationPreferencesService = async (adminId, newPrefs) => {
+  if (!adminId || !mongoose.Types.ObjectId.isValid(adminId)) {
+    const error = new Error("Valid Administrator identification is required to update preferences");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const admin = await Admin.findById(adminId);
+  if (!admin) {
+    const error = new Error("Administrator account not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  admin.metadata = admin.metadata || {};
+  admin.metadata.notificationPreferences = {
+    ...(admin.metadata.notificationPreferences || {}),
+    ...newPrefs,
+    inApp: true // Phase 7: Always enforce In-App active per Version 8 specification
+  };
+
+  await admin.save();
+  return admin.metadata.notificationPreferences;
 };

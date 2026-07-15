@@ -4,7 +4,11 @@ import {
   getBroadcastHistoryService,
   markNotificationAsReadService,
   markAllNotificationsAsReadService,
-  deleteNotificationService
+  deleteNotificationService,
+  getNotificationTemplatesService,
+  renderNotificationTemplate,
+  getAdminNotificationPreferencesService,
+  updateAdminNotificationPreferencesService
 } from "../../services/admin/adminNotificationService.js";
 
 /**
@@ -76,6 +80,94 @@ export const getBroadcastHistory = async (req, res) => {
     return res.status(statusCode).json({
       success: false,
       message: error.message || "Failed to retrieve broadcast history"
+    });
+  }
+};
+
+/**
+ * @desc    Get reusable notification templates catalog
+ * @route   GET /api/admin/notifications/templates
+ * @access  Private (Admin Only)
+ */
+export const getNotificationTemplates = async (req, res) => {
+  try {
+    const templates = await getNotificationTemplatesService();
+    return res.status(200).json({
+      success: true,
+      templates
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to retrieve notification templates"
+    });
+  }
+};
+
+/**
+ * @desc    Preview render a template with custom placeholder data
+ * @route   POST /api/admin/notifications/templates/preview
+ * @access  Private (Admin Only)
+ */
+export const renderPreviewTemplate = async (req, res) => {
+  try {
+    const { templateKey, placeholders = {} } = req.body;
+    const rendered = renderNotificationTemplate(templateKey, placeholders);
+    return res.status(200).json({
+      success: true,
+      rendered
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to render template preview"
+    });
+  }
+};
+
+/**
+ * @desc    Get admin notification preferences
+ * @route   GET /api/admin/notifications/preferences
+ * @access  Private (Admin Only)
+ */
+export const getAdminNotificationPreferences = async (req, res) => {
+  try {
+    const adminId = req.admin ? req.admin._id || req.admin.id : null;
+    const preferences = await getAdminNotificationPreferencesService(adminId);
+    return res.status(200).json({
+      success: true,
+      preferences
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to retrieve notification preferences"
+    });
+  }
+};
+
+/**
+ * @desc    Update admin notification preferences
+ * @route   PUT /api/admin/notifications/preferences
+ * @access  Private (Admin Only)
+ */
+export const updateAdminNotificationPreferences = async (req, res) => {
+  try {
+    const adminId = req.admin ? req.admin._id || req.admin.id : null;
+    const preferences = await updateAdminNotificationPreferencesService(adminId, req.body);
+    return res.status(200).json({
+      success: true,
+      message: "Notification preferences updated successfully",
+      preferences
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to update notification preferences"
     });
   }
 };
