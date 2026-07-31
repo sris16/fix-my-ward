@@ -2,6 +2,7 @@ import Issue from "../../models/Issue.js";
 import IssueHistory from "../../models/IssueHistory.js";
 import Admin from "../../models/Admin.js";
 import { generateIssueLifecycleNotification } from "./adminNotificationService.js";
+import { getPaginationData } from "../../utils/paginate.js";
 
 /**
  * Helper to record audit trail entries and automatically dispatch Version 8 lifecycle notifications
@@ -36,8 +37,6 @@ export const recordAuditLog = async ({ issueId, adminId, action, oldValue, newVa
  */
 export const getAdminIssuesService = async (queryParams) => {
   const {
-    page = 1,
-    limit = 10,
     search = "",
     status = "",
     priority = "",
@@ -45,10 +44,6 @@ export const getAdminIssuesService = async (queryParams) => {
     department = "",
     sortBy = "newest",
   } = queryParams;
-
-  const pageNum = Math.max(1, parseInt(page, 10) || 1);
-  const limitNum = Math.max(1, parseInt(limit, 10) || 10);
-  const skip = (pageNum - 1) * limitNum;
 
   const query = {};
 
@@ -108,11 +103,14 @@ export const getAdminIssuesService = async (queryParams) => {
   }
 
   const total = await Issue.countDocuments(query);
+  const pagination = getPaginationData(queryParams, total);
+
   let issues = await Issue.find(query)
     .populate("reportedBy", "name email")
     .sort(sortOption)
-    .skip(skip)
-    .limit(limitNum);
+    .skip(pagination.skip)
+    .limit(pagination.limit)
+    .lean();
 
   if (sortBy === "most_upvoted") {
     issues.sort((a, b) => (b.upvotes?.length || 0) - (a.upvotes?.length || 0));
@@ -121,18 +119,17 @@ export const getAdminIssuesService = async (queryParams) => {
     issues.sort((a, b) => (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0));
   }
 
-  const pages = Math.ceil(total / limitNum) || 1;
-
   return {
     issues,
     pagination: {
       total,
-      page: pageNum,
-      pages,
-      limit: limitNum,
+      page: pagination.page,
+      pages: pagination.totalPages,
+      limit: pagination.limit,
     },
   };
 };
+
 
 /**
  * Service to fetch single issue details by ID

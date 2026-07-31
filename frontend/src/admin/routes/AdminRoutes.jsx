@@ -1,22 +1,24 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { Route, Routes, Navigate, Outlet } from "react-router-dom";
 import { AdminAuthProvider, useAdminAuth } from "../context/AdminAuthContext";
 import AdminLayout from "../layouts/AdminLayout";
-import Login from "../pages/Login";
-import Dashboard from "../pages/Dashboard";
-import Issues from "../pages/Issues";
-import IssueDetails from "../pages/Issues/IssueDetails";
-import Departments from "../pages/Departments";
-import DepartmentDetails from "../pages/Departments/DepartmentDetails";
-import Analytics from "../pages/Analytics";
-import Citizens from "../pages/Citizens";
-import CitizenProfile from "../pages/Citizens/CitizenProfile";
-import LiveMonitor from "../pages/LiveMonitor";
-import Notifications from "../pages/Notifications";
-import Settings from "../pages/Settings";
-import AccessDenied from "../pages/AccessDenied/AccessDenied";
-import NotFound from "../pages/NotFound/NotFound";
 import Loading from "../pages/Loading/Loading";
+
+// Lazy-loaded Admin pages
+const Login = lazy(() => import("../pages/Login"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Issues = lazy(() => import("../pages/Issues"));
+const IssueDetails = lazy(() => import("../pages/Issues/IssueDetails"));
+const Departments = lazy(() => import("../pages/Departments"));
+const DepartmentDetails = lazy(() => import("../pages/Departments/DepartmentDetails"));
+const Analytics = lazy(() => import("../pages/Analytics"));
+const Citizens = lazy(() => import("../pages/Citizens"));
+const CitizenProfile = lazy(() => import("../pages/Citizens/CitizenProfile"));
+const LiveMonitor = lazy(() => import("../pages/LiveMonitor"));
+const Notifications = lazy(() => import("../pages/Notifications"));
+const Settings = lazy(() => import("../pages/Settings"));
+const AccessDenied = lazy(() => import("../pages/AccessDenied/AccessDenied"));
+const NotFound = lazy(() => import("../pages/NotFound/NotFound"));
 
 // 🔐 Protected Route guard for Admin Portal
 const AdminProtectedRoute = () => {
@@ -50,31 +52,34 @@ const AdminProtectedRoute = () => {
 export default function AdminRoutes() {
   return (
     <AdminAuthProvider>
-      <Routes>
-        <Route path="login" element={<Login />} />
-        
-        {/* Protected Admin Routes */}
-        <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="issues" element={<Issues />} />
-            <Route path="issues/:id" element={<IssueDetails />} />
-            <Route path="departments" element={<Departments />} />
-            <Route path="departments/:departmentName" element={<DepartmentDetails />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="citizens" element={<Citizens />} />
-            <Route path="citizens/:id" element={<CitizenProfile />} />
-            <Route path="live-monitor" element={<LiveMonitor />} />
-            <Route path="notifications" element={<Notifications />} />
-            <Route path="settings" element={<Settings />} />
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="login" element={<Login />} />
+          
+          {/* Protected Admin Routes */}
+          <Route element={<AdminProtectedRoute />}>
+            <Route element={<AdminLayout />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="issues" element={<Issues />} />
+              <Route path="issues/:id" element={<IssueDetails />} />
+              <Route path="departments" element={<Departments />} />
+              <Route path="departments/:departmentName" element={<DepartmentDetails />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="citizens" element={<Citizens />} />
+              <Route path="citizens/:id" element={<CitizenProfile />} />
+              <Route path="live-monitor" element={<LiveMonitor />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route path="access-denied" element={<AccessDenied />} />
-        <Route path="loading" element={<Loading />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route path="access-denied" element={<AccessDenied />} />
+          <Route path="loading" element={<Loading />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </AdminAuthProvider>
   );
 }
+

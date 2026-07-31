@@ -1,18 +1,30 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import axios from "axios";
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import ReportIssue from "./pages/ReportIssue";
-import MyReports from "./pages/MyReports";
-import PublicReports from "./pages/PublicReports";
-import MapPage from "./pages/MapPage";
-import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Notifications from "./pages/Notifications";
-import AdminRoutes from "./admin/routes/AdminRoutes";
+
+// Lazy-loaded Citizen pages
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ReportIssue = lazy(() => import("./pages/ReportIssue"));
+const MyReports = lazy(() => import("./pages/MyReports"));
+const PublicReports = lazy(() => import("./pages/PublicReports"));
+const MapPage = lazy(() => import("./pages/MapPage"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const AdminRoutes = lazy(() => import("./admin/routes/AdminRoutes"));
+
+// Fallback loader component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-slate-900 text-emerald-400">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      <span className="text-sm font-medium text-slate-300">Loading module...</span>
+    </div>
+  </div>
+);
 
 function App() {
   // Handle edge cases: Expired Sessions
@@ -37,85 +49,88 @@ function App() {
   }, []);
 
   return (
-    <Routes>
-      {/* Root Route: Auto-detect session or go to Registration */}
-      <Route 
-        path="/" 
-        element={
-          localStorage.getItem("token") ? <Navigate to="/dashboard" /> : <Navigate to="/register" />
-        } 
-      />
-      <Route path="/landing" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Root Route: Auto-detect session or go to Registration */}
+        <Route 
+          path="/" 
+          element={
+            localStorage.getItem("token") ? <Navigate to="/dashboard" /> : <Navigate to="/register" />
+          } 
+        />
+        <Route path="/landing" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/report"
-        element={
-          <ProtectedRoute>
-            <ReportIssue />
-          </ProtectedRoute>
-        }
-      />
-      
-      <Route
-        path="/my-reports"
-        element={
-          <ProtectedRoute>
-            <MyReports />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/report"
+          element={
+            <ProtectedRoute>
+              <ReportIssue />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/my-reports"
+          element={
+            <ProtectedRoute>
+              <MyReports />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/public-reports"
-        element={
-          <ProtectedRoute>
-            <PublicReports />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/public-reports"
+          element={
+            <ProtectedRoute>
+              <PublicReports />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/map"
-        element={
-          <ProtectedRoute>
-            <MapPage />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/map"
+          element={
+            <ProtectedRoute>
+              <MapPage />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/notifications"
-        element={
-          <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notifications />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Admin Portal Nested Routes */}
-      <Route path="/admin/*" element={<AdminRoutes />} />
-    </Routes>
+        {/* Admin Portal Nested Routes */}
+        <Route path="/admin/*" element={<AdminRoutes />} />
+      </Routes>
+    </Suspense>
   );
 }
 
 export default App;
+
